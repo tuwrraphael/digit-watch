@@ -992,7 +992,7 @@ int main(void)
     NRF_LOG_INFO("Heart Rate Sensor example started.");
     application_timers_start();
 
-    advertising_start(erase_bonds);
+    advertising_start(false);
 
 	init_display();
 
