@@ -15,7 +15,7 @@
 #define DISPLAY_EXTCOMIN (8)
 #define DISPLAY_DISP (11)
 
-#define SPI_INSTANCE  0 /**< SPI instance index. */
+#define SPI_INSTANCE  1 /**< SPI instance index. */
 static const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE);  /**< SPI instance. */
 static volatile bool spi_xfer_done;  /**< Flag used to indicate that SPI instance completed the transfer. */
 
@@ -76,7 +76,7 @@ void init_display() {
 	err_code = nrf_drv_ppi_init();
 	APP_ERROR_CHECK(err_code);
 
-	//err_code = nrf_drv_gpiote_init(); this is already initialized by the app_button library
+	//err_code = nrf_drv_gpiote_init();// this is already initialized by the app_button library
 	//APP_ERROR_CHECK(err_code);
 
 	nrf_drv_timer_config_t timer_cfg = NRF_DRV_TIMER_DEFAULT_CONFIG;
@@ -96,6 +96,7 @@ void init_display() {
 	spi_config.mode = NRF_DRV_SPI_MODE_0;
 	spi_config.bit_order = NRF_DRV_SPI_BIT_ORDER_LSB_FIRST;
 	APP_ERROR_CHECK(nrf_drv_spi_init(&spi, &spi_config, NULL, NULL));
+
 
 	nrf_delay_ms(200);
 
