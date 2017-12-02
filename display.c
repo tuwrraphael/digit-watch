@@ -2,103 +2,92 @@
 #include "nrf_gpio.h"
 #include "app_error.h"
 #include <string.h>
-#include "nrf_log.h"
-#include "nrf_log_ctrl.h"
-#include "nrf_log_default_backends.h"
 #include "nrf_delay.h"
-#include "nrf_drv_timer.h"
-#include "nrf_drv_ppi.h"
-#include "nrf_drv_gpiote.h"
-#include "display.h"
+#include "nrf_gfx.h"
+#include "nrf_lcd.h"
 
-#define DISPLAY_SCS (6)
-#define DISPLAY_EXTCOMIN (8)
-#define DISPLAY_DISP (11)
+#include "./display_extcomin.h"
+#include "./display.h"
 
-#define SPI_INSTANCE  1 /**< SPI instance index. */
-static const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE);  /**< SPI instance. */
-static volatile bool spi_xfer_done;  /**< Flag used to indicate that SPI instance completed the transfer. */
+#define SPI_INSTANCE 1 //SPI 0 is blocked by softdevice
 
-									 /**
-									 * @brief SPI user event handler.
-									 * @param event
-									 */
-void spi_event_handler(nrf_drv_spi_evt_t const * p_event,
-	void *                    p_context)
-{
-	spi_xfer_done = true;
-}
+static const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE);
 
-static nrf_drv_timer_t timer = NRF_DRV_TIMER_INSTANCE(1); //TIMER 0 is reserved by softdevice
-
-void timer_dummy_handler(nrf_timer_event_t event_type, void * p_context) {}
-
-static void extcomin_setup()
-{
-	uint32_t compare_evt_addr;
-	uint32_t gpiote_task_addr;
-	nrf_ppi_channel_t ppi_channel;
-	ret_code_t err_code;
-	nrf_drv_gpiote_out_config_t config = GPIOTE_CONFIG_OUT_TASK_TOGGLE(false);
-
-	err_code = nrf_drv_gpiote_out_init(DISPLAY_EXTCOMIN, &config);
-	APP_ERROR_CHECK(err_code);
-
-
-	nrf_drv_timer_extended_compare(&timer, (nrf_timer_cc_channel_t)0, 1000 /* ms */ * 1000UL, NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK, false);
-
-	err_code = nrf_drv_ppi_channel_alloc(&ppi_channel);
-	APP_ERROR_CHECK(err_code);
-
-	compare_evt_addr = nrf_drv_timer_event_address_get(&timer, NRF_TIMER_EVENT_COMPARE0);
-	gpiote_task_addr = nrf_drv_gpiote_out_task_addr_get(DISPLAY_EXTCOMIN);
-
-	err_code = nrf_drv_ppi_channel_assign(ppi_channel, compare_evt_addr, gpiote_task_addr);
-	APP_ERROR_CHECK(err_code);
-
-	err_code = nrf_drv_ppi_channel_enable(ppi_channel);
-	APP_ERROR_CHECK(err_code);
-
-	nrf_drv_gpiote_out_task_enable(DISPLAY_EXTCOMIN);
-}
-
-void init_display() {
-	nrf_gpio_cfg_output(DISPLAY_SCS); //SCS
-	nrf_gpio_cfg_output(DISPLAY_DISP); //DSP
-	nrf_gpio_cfg_output(DISPLAY_EXTCOMIN); //DSP
+static void gpio_setup() {
+	nrf_gpio_cfg_output(DISPLAY_SCS);
+	nrf_gpio_cfg_output(DISPLAY_DISP);
 
 	nrf_gpio_pin_write(DISPLAY_SCS, 0);
 	nrf_delay_ms(1);
 	nrf_gpio_pin_write(DISPLAY_DISP, 0);
+}
 
-	ret_code_t err_code;
-
-	err_code = nrf_drv_ppi_init();
-	APP_ERROR_CHECK(err_code);
-
-	//err_code = nrf_drv_gpiote_init();// this is already initialized by the app_button library
-	//APP_ERROR_CHECK(err_code);
-
-	nrf_drv_timer_config_t timer_cfg = NRF_DRV_TIMER_DEFAULT_CONFIG;
-	err_code = nrf_drv_timer_init(&timer, &timer_cfg, timer_dummy_handler);
-	APP_ERROR_CHECK(err_code);
-
-	extcomin_setup();
-
-	nrf_drv_timer_enable(&timer);
-
+static void spi_setup() {
 	nrf_drv_spi_config_t spi_config = NRF_DRV_SPI_DEFAULT_CONFIG;
 	spi_config.ss_pin = NRF_DRV_SPI_PIN_NOT_USED;
 	spi_config.miso_pin = NRF_DRV_SPI_PIN_NOT_USED;
-	spi_config.mosi_pin = 4;
-	spi_config.sck_pin = 3;
+	spi_config.mosi_pin = DISPLAY_MOSI;
+	spi_config.sck_pin = DISPLAY_SCK;
 	spi_config.frequency = NRF_DRV_SPI_FREQ_1M;
 	spi_config.mode = NRF_DRV_SPI_MODE_0;
 	spi_config.bit_order = NRF_DRV_SPI_BIT_ORDER_LSB_FIRST;
 	APP_ERROR_CHECK(nrf_drv_spi_init(&spi, &spi_config, NULL, NULL));
+}
 
+static ret_code_t disp_def_init(void)
+{
+	return NRF_SUCCESS;
+}
 
-	nrf_delay_ms(200);
+static void disp_def_uninit(void)
+{
+	//nrf_drv_spi_uninit(&spi);
+}
+
+static void disp_def_pixel_draw(uint16_t x, uint16_t y, uint32_t color)
+{
+}
+
+static void disp_def_rect_draw(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t color)
+{
+}
+
+static void disp_def_dummy_display(void)
+{
+}
+
+static void disp_def_rotation_set(nrf_lcd_rotation_t rotation)
+{
+}
+
+static void disp_def_display_invert(bool invert)
+{
+}
+
+static lcd_cb_t display_cb = {
+	.height = DISPLAY_HEIGHT,
+	.width = DISPLAY_WIDTH
+};
+
+const nrf_lcd_t display_definition = {
+	.lcd_init = disp_def_init,
+	.lcd_uninit = disp_def_uninit,
+	.lcd_pixel_draw = disp_def_pixel_draw,
+	.lcd_rect_draw = disp_def_rect_draw,
+	.lcd_display = disp_def_dummy_display,
+	.lcd_rotation_set = disp_def_rotation_set,
+	.lcd_display_invert = disp_def_display_invert,
+	.p_lcd_cb = &display_cb
+};
+
+static void gfx_setup() {
+	
+}
+
+void init_display() {
+	gpio_setup();
+	extcomin_setup();
+	spi_setup();
 
 	nrf_gpio_pin_write(DISPLAY_DISP, 1);
 
@@ -111,8 +100,6 @@ void init_display() {
 	nrf_delay_ms(1);
 
 	nrf_delay_ms(10);
-
-
 
 	uint8_t m_tx_buf2[] = { 1,64,
 		255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,

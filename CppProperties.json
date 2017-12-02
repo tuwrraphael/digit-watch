@@ -2,67 +2,33 @@
   "configurations": [
     {
       "inheritEnvironments": [
-        "msvc_x86"
-      ],
-      "name": "x86-Debug",
-      "includePath": [
-        "${env.INCLUDE}"
-      ],
-      "defines": [
-        "WIN32",
-        "_DEBUG",
-        "UNICODE",
-        "_UNICODE"
-      ],
-      "intelliSenseMode": "msvc-x86"
-    },
-    {
-      "inheritEnvironments": [
-        "msvc_x86"
-      ],
-      "name": "x86-Release",
-      "includePath": [
-        "${env.INCLUDE}"
-      ],
-      "defines": [
-        "WIN32",
-        "NDEBUG",
-        "UNICODE",
-        "_UNICODE"
-      ],
-      "intelliSenseMode": "msvc-x86"
-    },
-    {
-      "inheritEnvironments": [
         "msvc_x64"
       ],
-      "name": "x64-Debug",
+      "name": "NRF52832",
       "includePath": [
-        "${env.INCLUDE}"
+        "${env.INCLUDE}",
+        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\drivers_nrf\\spi_master",
+        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\libraries\\gfx",
+        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\drivers_nrf\\hal",
+        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\drivers_nrf\\delay",
+        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\drivers_nrf\\timer",
+        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\drivers_nrf\\ppi",
+        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\drivers_nrf\\gpiote",
+        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\libraries\\util",
+        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\config",
+        "D:\\environments\\arm\\6 2017-q2-update\\arm-none-eabi\\include",
+        "D:\\environments\\arm\\6 2017-q2-update\\arm-none-eabi\\include\\sys",
+        "D:\\environments\\arm\\6 2017-q2-update\\arm-none-eabi\\include\\c++\\4.9.3\\tr1",
+        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\device",
+        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\drivers_nrf\\nrf_soc_nosd",
+        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\libraries\\experimental_log",
+        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\device",
+        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\libraries\\util"
       ],
-      "defines": [
-        "WIN32",
-        "_DEBUG",
-        "UNICODE",
-        "_UNICODE"
-      ],
-      "intelliSenseMode": "msvc-x64"
-    },
-    {
-      "inheritEnvironments": [
-        "msvc_x64"
-      ],
-      "name": "x64-Release",
-      "includePath": [
-        "${env.INCLUDE}"
-      ],
-      "defines": [
-        "WIN32",
-        "NDEBUG",
-        "UNICODE",
-        "_UNICODE"
-      ],
-      "intelliSenseMode": "msvc-x64"
+      "defines": [ "NRF52832_XXAA" ],
+      "undefines": [ "_WIN32" ],
+      "forcedInclude": [ "c:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Tools\\MSVC\\14.11.25503\\include\\stdint.h" ],
+      "intelliSenseMode": "linux-arm"
     }
   ]
 }
