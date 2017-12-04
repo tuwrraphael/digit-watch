@@ -107,6 +107,9 @@ static void format_line_from_buffer(uint8_t *buf, uint8_t linenr) {
 	}
 }
 
+extern const nrf_gfx_font_desc_t orkney_8ptFontInfo;
+static const nrf_gfx_font_desc_t * p_font = &orkney_8ptFontInfo;
+static const char *test_text = "Hello World,\nI'm Digit.";
 
 void init_display() {
 	gpio_setup();
@@ -117,11 +120,14 @@ void init_display() {
 
 	APP_ERROR_CHECK(nrf_gfx_init(&display_definition));
 
-	nrf_gfx_line_t my_line = NRF_GFX_LINE(0, 0, 127, 127, 6);
-	nrf_gfx_line_t my_line2 = NRF_GFX_LINE(0, 127, 127, 0, 6);
+	//nrf_gfx_line_t my_line = NRF_GFX_LINE(0, 0, 127, 127, 6);
+	//nrf_gfx_line_t my_line2 = NRF_GFX_LINE(0, 127, 127, 0, 6);
 
-	APP_ERROR_CHECK(nrf_gfx_line_draw(&display_definition, &my_line, 1));
-	APP_ERROR_CHECK(nrf_gfx_line_draw(&display_definition, &my_line2, 1));
+	//APP_ERROR_CHECK(nrf_gfx_line_draw(&display_definition, &my_line, 1));
+	//APP_ERROR_CHECK(nrf_gfx_line_draw(&display_definition, &my_line2, 1));
+
+	nrf_gfx_point_t text_start = NRF_GFX_POINT(24, 64);
+	APP_ERROR_CHECK(nrf_gfx_print(&display_definition, &text_start, 1, test_text, p_font, true));
 
 	//display_buffer[4 * 64] = 0;
 	//display_buffer[4 * 64 + 1] = 0;
