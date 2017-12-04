@@ -2758,11 +2758,20 @@
 
 // </e>
 
+
 // <q> NRF_FPRINTF_ENABLED  - nrf_fprintf - fprintf function.
  
 
 #ifndef NRF_FPRINTF_ENABLED
 #define NRF_FPRINTF_ENABLED 1
+#endif
+
+
+// <q> NRF_GFX_ENABLED  - nrf_gfx - GFX module
+
+
+#ifndef NRF_GFX_ENABLED
+#define NRF_GFX_ENABLED 1
 #endif
 
 // <e> NRF_FSTORAGE_ENABLED - nrf_fstorage - Flash abstraction library

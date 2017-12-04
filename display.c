@@ -34,8 +34,11 @@ static void spi_setup() {
 	APP_ERROR_CHECK(nrf_drv_spi_init(&spi, &spi_config, NULL, NULL));
 }
 
+static uint32_t display_buffer[4 * 128];
+
 static ret_code_t disp_def_init(void)
 {
+	memset(display_buffer, 0xFFFFFFFF, sizeof(display_buffer));
 	return NRF_SUCCESS;
 }
 
@@ -46,10 +49,23 @@ static void disp_def_uninit(void)
 
 static void disp_def_pixel_draw(uint16_t x, uint16_t y, uint32_t color)
 {
+	uint16_t index = 4 * y + (x / 32);
+	uint32_t mask = (1 << x % 32);
+	if (color) {
+		display_buffer[index] &= ~(mask);
+	}
+	else {
+		display_buffer[index] |= mask;
+	}
 }
 
 static void disp_def_rect_draw(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t color)
 {
+	for (uint16_t i = 0; i < height; i++) {
+		for (uint16_t z = 0; z < width; i++) {
+			disp_def_pixel_draw(x + z, y + i, color);
+		}
+	}
 }
 
 static void disp_def_dummy_display(void)
@@ -80,14 +96,37 @@ const nrf_lcd_t display_definition = {
 	.p_lcd_cb = &display_cb
 };
 
-static void gfx_setup() {
-	
+static void format_line_from_buffer(uint8_t *buf, uint8_t linenr) {
+	*buf = 0;
+	buf++;
+	*buf = linenr;
+	uint16_t buffer_offset = linenr * 4;
+	for (uint8_t byte = 0; byte < 16; byte++) {
+		buf++;
+		*buf = (display_buffer[buffer_offset + (byte / 4)] >> (8 * (byte % 4))) & 0xFF;
+	}
 }
+
 
 void init_display() {
 	gpio_setup();
 	extcomin_setup();
 	spi_setup();
+
+	disp_def_init();
+
+	APP_ERROR_CHECK(nrf_gfx_init(&display_definition));
+
+	nrf_gfx_line_t my_line = NRF_GFX_LINE(0, 0, 127, 127, 6);
+	nrf_gfx_line_t my_line2 = NRF_GFX_LINE(0, 127, 127, 0, 6);
+
+	APP_ERROR_CHECK(nrf_gfx_line_draw(&display_definition, &my_line, 1));
+	APP_ERROR_CHECK(nrf_gfx_line_draw(&display_definition, &my_line2, 1));
+
+	//display_buffer[4 * 64] = 0;
+	//display_buffer[4 * 64 + 1] = 0;
+	//display_buffer[4 * 64 + 2] = 0;
+	//display_buffer[4 * 64 + 3] = 0;
 
 	nrf_gpio_pin_write(DISPLAY_DISP, 1);
 
@@ -101,30 +140,28 @@ void init_display() {
 
 	nrf_delay_ms(10);
 
-	uint8_t m_tx_buf2[] = { 1,64,
-		255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,
-		0,65,
-		255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,
-		0,66,
-		255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,
-		0,67,
-		255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,
-		0,68,
-		255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,
-		0,69,
-		255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,
-		0,70,
-		255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,
-		0,0 };
+	uint8_t m_tx_buf2[254];
 
-	nrf_gpio_pin_write(DISPLAY_SCS, 1);
-	nrf_delay_ms(1);
+	for (uint8_t z = 0; z < 10; z++)
+	{
+		for (uint8_t i = 0; i < 14 && ((z * 14) + i) <129; i++) {
+			format_line_from_buffer(&m_tx_buf2[i * 18], 1+(z * 14 ) + i);
+		}
 
-	APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf2, sizeof(m_tx_buf2), NULL, 0));
+		m_tx_buf2[0] = 1;
 
-	nrf_gpio_pin_write(DISPLAY_SCS, 0);
-	nrf_delay_ms(1);
+		m_tx_buf2[14 * 18] = 0;
+		m_tx_buf2[14 * 18 + 1] = 0;
 
+
+		nrf_gpio_pin_write(DISPLAY_SCS, 1);
+		nrf_delay_ms(1);
+
+		APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf2, 14 * 18 + 2, NULL, 0));
+
+		nrf_gpio_pin_write(DISPLAY_SCS, 0);
+		nrf_delay_ms(1);
+	}
 	nrf_delay_ms(10);
 
 	uint8_t m_tx_buf3[] = { 0,0 };
