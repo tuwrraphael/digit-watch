@@ -2,20 +2,16 @@
   "version": "0.2.1",
   "tasks": [
     {
-      "taskName": "task-Makefile",
-      "appliesTo": "pca10040/s132/armgcc/Makefile",
-      "type": "launch",
-      "command": "make",
-      "args": [ "-C", "${workspaceRoot}/pca10040/s132/armgcc" ],
-      "contextType": "build"
-    },
-    {
       "taskName": "flash",
       "appliesTo": "pca10040/s132/armgcc/Makefile",
       "type": "launch",
       "command": "make",
-      "args": [ "flash_dap", "-C", "${workspaceRoot}/pca10040/s132/armgcc" ],
+      "args": [
+        "flash_dap",
+        "-C",
+        "${workspaceRoot}/pca10040/s132/armgcc"
+      ],
       "contextType": "custom"
-    }
+    },
   ]
 }

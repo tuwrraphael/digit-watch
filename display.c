@@ -61,8 +61,9 @@ static void disp_def_pixel_draw(uint16_t x, uint16_t y, uint32_t color)
 
 static void disp_def_rect_draw(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t color)
 {
-	for (uint16_t i = 0; i < height; i++) {
-		for (uint16_t z = 0; z < width; i++) {
+	uint16_t i, z;
+	for (i = 0; i < height; i++) {
+		for (z = 0; z < width; i++) {
 			disp_def_pixel_draw(x + z, y + i, color);
 		}
 	}
@@ -101,7 +102,8 @@ static void format_line_from_buffer(uint8_t *buf, uint8_t linenr) {
 	buf++;
 	*buf = linenr;
 	uint16_t buffer_offset = linenr * 4;
-	for (uint8_t byte = 0; byte < 16; byte++) {
+	uint8_t byte;
+	for (byte = 0; byte < 16; byte++) {
 		buf++;
 		*buf = (display_buffer[buffer_offset + (byte / 4)] >> (8 * (byte % 4))) & 0xFF;
 	}
@@ -148,9 +150,12 @@ void init_display() {
 
 	uint8_t m_tx_buf2[254];
 
-	for (uint8_t z = 0; z < 10; z++)
+	uint8_t z;
+	uint8_t i;
+
+	for (z = 0; z < 10; z++)
 	{
-		for (uint8_t i = 0; i < 14 && ((z * 14) + i) <129; i++) {
+		for (i = 0; i < 14 && ((z * 14) + i) <129; i++) {
 			format_line_from_buffer(&m_tx_buf2[i * 18], 1+(z * 14 ) + i);
 		}
 
