@@ -31,6 +31,7 @@
 
 #include "./device_information.h"
 #include "./display.h"
+#include "./ble_digit.h"
 
 #define APP_ADV_INTERVAL                    300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_TIMEOUT_IN_SECONDS          180                                     /**< The advertising timeout in units of seconds. */
@@ -80,6 +81,7 @@
 
 BLE_HRS_DEF(m_hrs);                                                 /**< Heart rate service instance. */
 BLE_BAS_DEF(m_bas);                                                 /**< Structure used to identify the battery service. */
+BLE_DIGIT_DEF(m_digit);
 NRF_BLE_GATT_DEF(m_gatt);                                           /**< GATT module instance. */
 BLE_ADVERTISING_DEF(m_advertising);                                 /**< Advertising module instance. */
 APP_TIMER_DEF(m_battery_timer_id);                                  /**< Battery timer. */
@@ -96,13 +98,6 @@ static sensorsim_cfg_t   m_heart_rate_sim_cfg;                      /**< Heart R
 static sensorsim_state_t m_heart_rate_sim_state;                    /**< Heart Rate sensor simulator state. */
 static sensorsim_cfg_t   m_rr_interval_sim_cfg;                     /**< RR Interval sensor simulator configuration. */
 static sensorsim_state_t m_rr_interval_sim_state;                   /**< RR Interval sensor simulator state. */
-
-static ble_uuid_t m_adv_uuids[] =                                   /**< Universally unique service identifiers. */
-{
-    {BLE_UUID_HEART_RATE_SERVICE,           BLE_UUID_TYPE_BLE},
-    {BLE_UUID_BATTERY_SERVICE,              BLE_UUID_TYPE_BLE},
-    {BLE_UUID_DEVICE_INFORMATION_SERVICE,   BLE_UUID_TYPE_BLE}
-};
 
 
 /**@brief Callback function for asserts in the SoftDevice.
@@ -499,6 +494,7 @@ static void services_init(void)
     ble_hrs_init_t hrs_init;
     ble_bas_init_t bas_init;
     ble_dis_init_t dis_init;
+	ble_digit_init_t digit_init;
     uint8_t        body_sensor_location;
 
     // Initialize Heart Rate Service.
@@ -538,6 +534,14 @@ static void services_init(void)
 
     err_code = ble_bas_init(&m_bas, &bas_init);
     APP_ERROR_CHECK(err_code);
+
+	memset(&digit_init, 0, sizeof(digit_init));
+
+	digit_init.support_notification = true;
+	digit_init.initial_value = 100;
+
+	err_code = ble_digit_init(&m_digit, &digit_init);
+	APP_ERROR_CHECK(err_code);
 
     // Initialize Device Information Service.
     memset(&dis_init, 0, sizeof(dis_init));
@@ -909,6 +913,15 @@ static void advertising_init(void)
     ret_code_t             err_code;
     ble_advertising_init_t init;
 
+	ble_uuid_t digit_service_uuid;
+	digit_service_uuid.uuid = DIGIT_UUID_SERVICE;
+	digit_service_uuid.type = m_digit.uuid_type;
+
+	ble_uuid_t m_adv_uuids[] = 
+	{
+		digit_service_uuid
+	};
+
     memset(&init, 0, sizeof(init));
 
     init.advdata.name_type               = BLE_ADVDATA_FULL_NAME;
@@ -982,8 +995,8 @@ int main(void)
     ble_stack_init();
     gap_params_init();
     gatt_init();
+	services_init();
     advertising_init();
-    services_init();
     sensor_simulator_init();
     conn_params_init();
     peer_manager_init();
