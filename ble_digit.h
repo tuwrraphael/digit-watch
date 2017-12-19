@@ -43,5 +43,16 @@ void ble_digit_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context);
 
 uint32_t ble_digit_value_update(ble_digit_t *p_digit, uint8_t value);
 
+typedef struct {
+	uint16_t year;
+	uint8_t month;
+	uint8_t day;
+	uint8_t dayOfWeek;
+	uint8_t hour;
+	uint8_t minute;
+	uint8_t second;
+	uint8_t fraction;
+} cts_date_t;
+
 
 #endif // APP_BLE_DIGIT_H

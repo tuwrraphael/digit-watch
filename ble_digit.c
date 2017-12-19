@@ -1,10 +1,12 @@
 #include "sdk_common.h"
 #include <string.h>
 #include "ble_srv_common.h"
+#include "nrf_log.h"
 
 #include "ble_digit.h"
 
 #define INVALID_VALUE 255
+#define CTS_DATE_SIZE 9
 
 static void on_connect(ble_digit_t *p_digit, ble_evt_t const * p_ble_evt)
 {
@@ -30,6 +32,33 @@ static void on_write(ble_digit_t * p_digit, ble_evt_t const * p_ble_evt)
 	{
 		return;
 		//CCCD event handler stuff
+	}
+
+	if ((p_evt_write->handle == p_digit->value_char_handles.value_handle)) {
+		if (p_evt_write->len == 9) {
+			cts_date_t cts_date;
+			cts_date.year = uint16_decode(&p_evt_write->data[0]);
+			cts_date.month = p_evt_write->data[2];
+			cts_date.day = p_evt_write->data[3];
+			cts_date.hour = p_evt_write->data[4];
+			cts_date.minute = p_evt_write->data[5];
+			cts_date.second = p_evt_write->data[6];
+			cts_date.dayOfWeek = p_evt_write->data[7];
+			cts_date.fraction = p_evt_write->data[8];
+			NRF_LOG_INFO("Received date: %d, %2d.%2d.%4d",
+				cts_date.dayOfWeek,
+				cts_date.day, 
+				cts_date.month, 
+				cts_date.year);
+			NRF_LOG_INFO("Received time: %2d:%2d:%2d.%d",
+				cts_date.hour, 
+				cts_date.minute, 
+				cts_date.second,
+				cts_date.fraction);
+		}
+		else {
+			NRF_LOG_INFO("Insufficient data length: %d.", p_evt_write->len);
+		}
 	}
 }
 
@@ -105,7 +134,7 @@ static uint32_t value_char_add(ble_digit_t * p_digit, const ble_digit_init_t * p
 	attr_char_value.p_attr_md = &attr_md;
 	attr_char_value.init_len = sizeof(uint8_t);
 	attr_char_value.init_offs = 0;
-	attr_char_value.max_len = sizeof(uint8_t);
+	attr_char_value.max_len = sizeof(uint8_t) * CTS_DATE_SIZE;
 	attr_char_value.p_value = &initial_battery_level;
 
 	return sd_ble_gatts_characteristic_add(p_digit->service_handle, 
