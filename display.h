@@ -12,4 +12,6 @@
 
 void init_display();
 
+void transfer_buffer_to_display();
+
 #endif // !APP_DISPLAY_H

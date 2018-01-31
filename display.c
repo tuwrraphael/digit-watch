@@ -111,52 +111,25 @@ static void format_line_from_buffer(uint8_t *buf, uint8_t linenr) {
 
 extern const nrf_gfx_font_desc_t orkney_8ptFontInfo;
 static const nrf_gfx_font_desc_t * p_font = &orkney_8ptFontInfo;
-static const char *test_text = "Hello World,\nI'm Digit.";
+static const char *test_text = "Wie spaet\nist es?.";
 
-void init_display() {
-	gpio_setup();
-	extcomin_setup();
-	spi_setup();
-
-	disp_def_init();
-
-	APP_ERROR_CHECK(nrf_gfx_init(&display_definition));
-
-	//nrf_gfx_line_t my_line = NRF_GFX_LINE(0, 0, 127, 127, 6);
-	//nrf_gfx_line_t my_line2 = NRF_GFX_LINE(0, 127, 127, 0, 6);
-
-	//APP_ERROR_CHECK(nrf_gfx_line_draw(&display_definition, &my_line, 1));
-	//APP_ERROR_CHECK(nrf_gfx_line_draw(&display_definition, &my_line2, 1));
-
-	nrf_gfx_point_t text_start = NRF_GFX_POINT(24, 64);
-	APP_ERROR_CHECK(nrf_gfx_print(&display_definition, &text_start, 1, test_text, p_font, true));
-
-	//display_buffer[4 * 64] = 0;
-	//display_buffer[4 * 64 + 1] = 0;
-	//display_buffer[4 * 64 + 2] = 0;
-	//display_buffer[4 * 64 + 3] = 0;
-
+static void init_display_spi() {
 	nrf_gpio_pin_write(DISPLAY_DISP, 1);
-
 	uint8_t m_tx_buf[] = { 4,0 };
-
 	nrf_gpio_pin_write(DISPLAY_SCS, 1);
 	nrf_delay_ms(1);
 	APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf, sizeof(m_tx_buf), NULL, 0));
 	nrf_gpio_pin_write(DISPLAY_SCS, 0);
-	nrf_delay_ms(1);
+}
 
-	nrf_delay_ms(10);
-
+void transfer_buffer_to_display() {
 	uint8_t m_tx_buf2[254];
-
 	uint8_t z;
 	uint8_t i;
-
 	for (z = 0; z < 10; z++)
 	{
 		for (i = 0; i < 14 && ((z * 14) + i) <129; i++) {
-			format_line_from_buffer(&m_tx_buf2[i * 18], 1+(z * 14 ) + i);
+			format_line_from_buffer(&m_tx_buf2[i * 18], 1 + (z * 14) + i);
 		}
 
 		m_tx_buf2[0] = 1;
@@ -173,8 +146,9 @@ void init_display() {
 		nrf_gpio_pin_write(DISPLAY_SCS, 0);
 		nrf_delay_ms(1);
 	}
-	nrf_delay_ms(10);
+}
 
+static void switch_display_mode() {
 	uint8_t m_tx_buf3[] = { 0,0 };
 
 	nrf_gpio_pin_write(DISPLAY_SCS, 1);
@@ -183,7 +157,19 @@ void init_display() {
 	APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf3, sizeof(m_tx_buf3), NULL, 0));
 
 	nrf_gpio_pin_write(DISPLAY_SCS, 0);
-	nrf_delay_ms(1);
+}
 
-	nrf_delay_ms(10);
+void init_display() {
+	gpio_setup();
+	extcomin_setup();
+	spi_setup();
+	disp_def_init();
+	init_display_spi();
+	APP_ERROR_CHECK(nrf_gfx_init(&display_definition));
+
+	nrf_gfx_point_t text_start = NRF_GFX_POINT(24, 64);
+	APP_ERROR_CHECK(nrf_gfx_print(&display_definition, &text_start, 1, test_text, p_font, true));
+
+	transfer_buffer_to_display();
+	switch_display_mode();
 }
