@@ -3,7 +3,8 @@
 #include "ble_srv_common.h"
 #include "nrf_log.h"
 
-#include "ble_digit.h"
+#include "./ble_digit.h"
+#include "./cts_date.h"
 
 #define INVALID_VALUE 255
 #define CTS_DATE_SIZE 9
@@ -45,19 +46,12 @@ static void on_write(ble_digit_t * p_digit, ble_evt_t const * p_ble_evt)
 			cts_date.second = p_evt_write->data[6];
 			cts_date.dayOfWeek = p_evt_write->data[7];
 			cts_date.fraction = p_evt_write->data[8];
-			NRF_LOG_INFO("Received date: %d, %2d.%2d.%4d",
-				cts_date.dayOfWeek,
-				cts_date.day, 
-				cts_date.month, 
-				cts_date.year);
-			NRF_LOG_INFO("Received time: %2d:%2d:%2d.%d",
-				cts_date.hour, 
-				cts_date.minute, 
-				cts_date.second,
-				cts_date.fraction);
+			if (NULL != p_digit->cts_received) {
+				p_digit->cts_received(&cts_date);
+			}
 		}
 		else {
-			NRF_LOG_INFO("Insufficient data length: %d.", p_evt_write->len);
+			NRF_LOG_ERROR("Insufficient data length for cts: %d.", p_evt_write->len);
 		}
 	}
 }
@@ -93,7 +87,7 @@ static uint32_t value_char_add(ble_digit_t * p_digit, const ble_digit_init_t * p
 	ble_gatts_attr_t    attr_char_value;
 
 	ble_gatts_attr_md_t attr_md;
-	uint8_t             initial_battery_level;
+	uint8_t             initial_value;
 	ble_uuid_t			ble_uuid;
 
 	if (p_digit->is_notification_supported)
@@ -126,7 +120,7 @@ static uint32_t value_char_add(ble_digit_t * p_digit, const ble_digit_init_t * p
 	attr_md.wr_auth = 0;
 	attr_md.vlen = 0;
 
-	initial_battery_level = p_digit_init->initial_value;
+	initial_value = p_digit_init->initial_value;
 
 	memset(&attr_char_value, 0, sizeof(attr_char_value));
 
@@ -135,9 +129,11 @@ static uint32_t value_char_add(ble_digit_t * p_digit, const ble_digit_init_t * p
 	attr_char_value.init_len = sizeof(uint8_t);
 	attr_char_value.init_offs = 0;
 	attr_char_value.max_len = sizeof(uint8_t) * CTS_DATE_SIZE;
-	attr_char_value.p_value = &initial_battery_level;
+	attr_char_value.p_value = &initial_value;
 
-	return sd_ble_gatts_characteristic_add(p_digit->service_handle, 
+	p_digit->cts_received = p_digit_init->cts_received;
+
+	return sd_ble_gatts_characteristic_add(p_digit->service_handle,
 		&char_md,
 		&attr_char_value,
 		&p_digit->value_char_handles);

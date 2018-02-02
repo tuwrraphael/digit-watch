@@ -14,4 +14,8 @@ void init_display();
 
 void transfer_buffer_to_display();
 
+void draw_time_indicator(float s, float indicator_length, uint8_t thickness);
+
+void switch_display_mode();
+
 #endif // !APP_DISPLAY_H

@@ -5,6 +5,8 @@
 #include "nrf_delay.h"
 #include "nrf_gfx.h"
 #include "nrf_lcd.h"
+#include <math.h>
+#include "nrf_log.h"
 
 #include "./display_extcomin.h"
 #include "./display.h"
@@ -63,7 +65,7 @@ static void disp_def_rect_draw(uint16_t x, uint16_t y, uint16_t width, uint16_t 
 {
 	uint16_t i, z;
 	for (i = 0; i < height; i++) {
-		for (z = 0; z < width; i++) {
+		for (z = 0; z < width; z++) {
 			disp_def_pixel_draw(x + z, y + i, color);
 		}
 	}
@@ -111,7 +113,7 @@ static void format_line_from_buffer(uint8_t *buf, uint8_t linenr) {
 
 extern const nrf_gfx_font_desc_t orkney_8ptFontInfo;
 static const nrf_gfx_font_desc_t * p_font = &orkney_8ptFontInfo;
-static const char *test_text = "Wie spaet\nist es?.";
+static const char *test_text = "Wie spaet\nist es?";
 
 static void init_display_spi() {
 	nrf_gpio_pin_write(DISPLAY_DISP, 1);
@@ -128,7 +130,7 @@ void transfer_buffer_to_display() {
 	uint8_t i;
 	for (z = 0; z < 10; z++)
 	{
-		for (i = 0; i < 14 && ((z * 14) + i) <129; i++) {
+		for (i = 0; i < 14 && ((z * 14) + i) < 129; i++) {
 			format_line_from_buffer(&m_tx_buf2[i * 18], 1 + (z * 14) + i);
 		}
 
@@ -146,9 +148,10 @@ void transfer_buffer_to_display() {
 		nrf_gpio_pin_write(DISPLAY_SCS, 0);
 		nrf_delay_ms(1);
 	}
+	disp_def_init();
 }
 
-static void switch_display_mode() {
+void switch_display_mode() {
 	uint8_t m_tx_buf3[] = { 0,0 };
 
 	nrf_gpio_pin_write(DISPLAY_SCS, 1);
@@ -159,6 +162,31 @@ static void switch_display_mode() {
 	nrf_gpio_pin_write(DISPLAY_SCS, 0);
 }
 
+#define M_PI		(3.14159265358979323846)
+
+void draw_time_indicator(float s, float indicator_length, uint8_t thickness) {
+	
+	uint8_t x = 64 + (cos(((double)(15 - s)*M_PI) / ((double)30)) * indicator_length);
+	uint8_t y = 64 - (sin(((double)(15 - s)*M_PI) / ((double)30)) * indicator_length);
+	if (x < 64 || y < 64) {
+		nrf_gfx_line_t line = NRF_GFX_LINE(
+			x,
+			y,
+			64,
+			64, thickness);
+
+		APP_ERROR_CHECK(nrf_gfx_line_draw(&display_definition, &line, 1));
+	}
+	else {
+		nrf_gfx_line_t line = NRF_GFX_LINE(
+			64,
+			64,
+			x,
+			y, thickness);
+		APP_ERROR_CHECK(nrf_gfx_line_draw(&display_definition, &line, 1));
+	}
+}
+
 void init_display() {
 	gpio_setup();
 	extcomin_setup();
@@ -166,10 +194,4 @@ void init_display() {
 	disp_def_init();
 	init_display_spi();
 	APP_ERROR_CHECK(nrf_gfx_init(&display_definition));
-
-	nrf_gfx_point_t text_start = NRF_GFX_POINT(24, 64);
-	APP_ERROR_CHECK(nrf_gfx_print(&display_definition, &text_start, 1, test_text, p_font, true));
-
-	transfer_buffer_to_display();
-	switch_display_mode();
 }
