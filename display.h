@@ -10,12 +10,14 @@
 #define DISPLAY_WIDTH (128)
 #define DISPLAY_HEIGHT (128)
 
-void init_display();
+void display_init();
 
 void transfer_buffer_to_display();
 
 void draw_time_indicator(float s, float indicator_length, uint8_t thickness);
 
 void switch_display_mode();
+
+void display_uninit();
 
 #endif // !APP_DISPLAY_H

@@ -38,9 +38,13 @@ static void spi_setup() {
 
 static uint32_t display_buffer[4 * 128];
 
+static void clear_display_buffer() {
+	memset(display_buffer, 0xFFFFFFFF, sizeof(display_buffer));
+}
+
 static ret_code_t disp_def_init(void)
 {
-	memset(display_buffer, 0xFFFFFFFF, sizeof(display_buffer));
+	clear_display_buffer();
 	return NRF_SUCCESS;
 }
 
@@ -111,9 +115,8 @@ static void format_line_from_buffer(uint8_t *buf, uint8_t linenr) {
 	}
 }
 
-extern const nrf_gfx_font_desc_t orkney_8ptFontInfo;
-static const nrf_gfx_font_desc_t * p_font = &orkney_8ptFontInfo;
-static const char *test_text = "Wie spaet\nist es?";
+//extern const nrf_gfx_font_desc_t orkney_8ptFontInfo;
+//static const nrf_gfx_font_desc_t * p_font = &orkney_8ptFontInfo;
 
 static void init_display_spi() {
 	nrf_gpio_pin_write(DISPLAY_DISP, 1);
@@ -148,7 +151,7 @@ void transfer_buffer_to_display() {
 		nrf_gpio_pin_write(DISPLAY_SCS, 0);
 		nrf_delay_ms(1);
 	}
-	disp_def_init();
+	clear_display_buffer();
 }
 
 void switch_display_mode() {
@@ -187,11 +190,19 @@ void draw_time_indicator(float s, float indicator_length, uint8_t thickness) {
 	}
 }
 
-void init_display() {
+void display_init() {
 	gpio_setup();
 	extcomin_setup();
 	spi_setup();
 	disp_def_init();
 	init_display_spi();
 	APP_ERROR_CHECK(nrf_gfx_init(&display_definition));
+}
+
+void display_uninit() {
+	nrf_gpio_pin_write(DISPLAY_DISP, 0);
+	//TODO extcomin teardown
+	nrf_drv_spi_uninit(&spi);
+	nrf_gpio_cfg_default(DISPLAY_SCS);
+	nrf_gpio_cfg_default(DISPLAY_DISP);
 }

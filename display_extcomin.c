@@ -7,8 +7,8 @@
 #include "./display_extcomin.h"
 #include "./display.h"
 
-#define TIMER_INSTACE 1 //TIMER 0 is reserved by softdevice
-static nrf_drv_timer_t timer = NRF_DRV_TIMER_INSTANCE(TIMER_INSTACE);
+#define TIMER_INSTANCE 1 //TIMER 0 is reserved by softdevice
+static nrf_drv_timer_t timer = NRF_DRV_TIMER_INSTANCE(TIMER_INSTANCE);
 
 static void timer_dummy_handler(nrf_timer_event_t event_type, void * p_context) {}
 
@@ -18,8 +18,7 @@ void extcomin_setup()
 
 	APP_ERROR_CHECK(nrf_drv_ppi_init());
 
-	//err_code = nrf_drv_gpiote_init();// this is already initialized by the app_button library
-	//APP_ERROR_CHECK(err_code);
+	APP_ERROR_CHECK(nrf_drv_gpiote_init());	
 
 	nrf_drv_timer_config_t timer_cfg = NRF_DRV_TIMER_DEFAULT_CONFIG;
 	APP_ERROR_CHECK(nrf_drv_timer_init(&timer, &timer_cfg, timer_dummy_handler));
