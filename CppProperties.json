@@ -1,7 +1,7 @@
 {
   "configurations": [
     {
-      "inheritEnvironments": [ "gcc_arm" ],
+      "inheritEnvironments": [ "gcc-arm" ],
       "name": "gccarm",
       "includePath": [
         "${env.INCLUDE}",
@@ -27,46 +27,20 @@
         "${env.NRF_SDK_ROOT}\\components\\ble\\ble_services\\ble_bas",
         "${env.NRF_SDK_ROOT}\\components\\ble\\ble_services\\ble_hrs",
         "${env.NRF_SDK_ROOT}\\components\\ble\\ble_services\\ble_dis",
+        "${env.NRF_SDK_ROOT}\\components\\ble\\ble_services\\ble_dfu",
         "${env.NRF_SDK_ROOT}\\components\\ble\\nrf_ble_gatt",
         "${env.NRF_SDK_ROOT}\\components\\ble\\peer_manager",
         "${env.NRF_SDK_ROOT}\\components\\libraries\\fds",
         "${env.NRF_SDK_ROOT}\\components\\libraries\\bsp",
         "${env.NRF_SDK_ROOT}\\components\\libraries\\timer",
-        "${env.NRF_SDK_ROOT}\\components\\libraries\\sensorsim"
+        "${env.NRF_SDK_ROOT}\\components\\libraries\\sensorsim",
+        "${env.NRF_SDK_ROOT}\\components\\libraries\\bootloader\\dfu",
+        "${env.NRF_SDK_ROOT}\\components\\libraries\\bootloader\\ble_dfu",
+        "${env.NRF_SDK_ROOT}\\components\\libraries\\svc"
       ],
       "defines": [
         "__STATIC_INLINE"
       ],
-      "intelliSenseMode": "linux-gcc-arm"
-    },
-    {
-      "inheritEnvironments": [
-        "msvc_x64"
-      ],
-      "name": "NRF52832",
-      "includePath": [
-        "${env.INCLUDE}",
-        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\drivers_nrf\\spi_master",
-        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\libraries\\gfx",
-        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\drivers_nrf\\hal",
-        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\drivers_nrf\\delay",
-        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\drivers_nrf\\timer",
-        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\drivers_nrf\\ppi",
-        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\drivers_nrf\\gpiote",
-        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\libraries\\util",
-        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\config",
-        "D:\\environments\\arm\\6 2017-q2-update\\arm-none-eabi\\include",
-        "D:\\environments\\arm\\6 2017-q2-update\\arm-none-eabi\\include\\sys",
-        "D:\\environments\\arm\\6 2017-q2-update\\arm-none-eabi\\include\\c++\\4.9.3\\tr1",
-        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\device",
-        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\drivers_nrf\\nrf_soc_nosd",
-        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\libraries\\experimental_log",
-        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\device",
-        "D:\\environments\\nrf\\nRF5_SDK_14.2.0_17b948a\\nRF5_SDK_14.2.0_17b948a\\components\\libraries\\util"
-      ],
-      "defines": [ "NRF52832_XXAA" ],
-      "undefines": [ "_WIN32" ],
-      "forcedInclude": [ "c:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Tools\\MSVC\\14.11.25503\\include\\stdint.h" ],
       "intelliSenseMode": "linux-gcc-arm"
     }
   ]

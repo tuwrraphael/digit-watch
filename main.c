@@ -27,6 +27,12 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
+#include "nrf_dfu_svci.h"
+#include "nrf_svci_async_function.h"
+#include "nrf_svci_async_handler.h"
+#include "ble_dfu.h"
+#include "nrf_pwr_mgmt.h"
+
 #include "./device_information.h"
 #include "./display.h"
 #include "./ble_digit.h"
@@ -91,6 +97,59 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
 {
 	app_error_handler(DEAD_BEEF, line_num, p_file_name);
 }
+
+/**@brief Handler for shutdown preparation.
+*
+* @details During shutdown procedures, this function will be called at a 1 second interval
+*          untill the function returns true. When the function returns true, it means that the
+*          app is ready to reset to DFU mode.
+*
+* @param[in]   event   Power manager event.
+*
+* @retval  True if shutdown is allowed by this power manager handler, otherwise false.
+*/
+static bool app_shutdown_handler(nrf_pwr_mgmt_evt_t event)
+{
+	switch (event)
+	{
+	case NRF_PWR_MGMT_EVT_PREPARE_DFU:
+		NRF_LOG_INFO("Power management wants to reset to DFU mode.");
+		// YOUR_JOB: Get ready to reset into DFU mode
+		//
+		// If you aren't finished with any ongoing tasks, return "false" to
+		// signal to the system that reset is impossible at this stage.
+		//
+		// Here is an example using a variable to delay resetting the device.
+		//
+		// if (!m_ready_for_reset)
+		// {
+		//      return false;
+		// }
+		// else
+		//{
+		//
+		//    // Device ready to enter
+		//    uint32_t err_code;
+		//    err_code = sd_softdevice_disable();
+		//    APP_ERROR_CHECK(err_code);
+		//    err_code = app_timer_stop_all();
+		//    APP_ERROR_CHECK(err_code);
+		//}
+		break;
+
+	default:
+		// YOUR_JOB: Implement any of the other events available from the power management module:
+		//      -NRF_PWR_MGMT_EVT_PREPARE_SYSOFF
+		//      -NRF_PWR_MGMT_EVT_PREPARE_WAKEUP
+		//      -NRF_PWR_MGMT_EVT_PREPARE_RESET
+		return true;
+	}
+
+	NRF_LOG_INFO("Power management allowed to reset to DFU mode.");
+	return true;
+}
+NRF_PWR_MGMT_HANDLER_REGISTER(app_shutdown_handler, 0);
+
 
 
 /**@brief Clear bond information from persistent storage.
@@ -349,6 +408,47 @@ static void cts_received(cts_date_t *date) {
 	time_state.time_known = true;
 }
 
+// YOUR_JOB: Update this code if you want to do anything given a DFU event (optional).
+/**@brief Function for handling dfu events from the Buttonless Secure DFU service
+*
+* @param[in]   event   Event from the Buttonless Secure DFU service.
+*/
+static void ble_dfu_evt_handler(ble_dfu_buttonless_evt_type_t event)
+{
+	switch (event)
+	{
+	case BLE_DFU_EVT_BOOTLOADER_ENTER_PREPARE:
+		NRF_LOG_INFO("Device is preparing to enter bootloader mode.");
+		// YOUR_JOB: Disconnect all bonded devices that currently are connected.
+		//           This is required to receive a service changed indication
+		//           on bootup after a successful (or aborted) Device Firmware Update.
+		break;
+
+	case BLE_DFU_EVT_BOOTLOADER_ENTER:
+		// YOUR_JOB: Write app-specific unwritten data to FLASH, control finalization of this
+		//           by delaying reset by reporting false in app_shutdown_handler
+		NRF_LOG_INFO("Device will enter bootloader mode.");
+		break;
+
+	case BLE_DFU_EVT_BOOTLOADER_ENTER_FAILED:
+		NRF_LOG_ERROR("Request to enter bootloader mode failed asynchroneously.");
+		// YOUR_JOB: Take corrective measures to resolve the issue
+		//           like calling APP_ERROR_CHECK to reset the device.
+		break;
+
+	case BLE_DFU_EVT_RESPONSE_SEND_ERROR:
+		NRF_LOG_ERROR("Request to send a response to client failed.");
+		// YOUR_JOB: Take corrective measures to resolve the issue
+		//           like calling APP_ERROR_CHECK to reset the device.
+		APP_ERROR_CHECK(false);
+		break;
+
+	default:
+		NRF_LOG_ERROR("Unknown event from ble_dfu_buttonless.");
+		break;
+	}
+}
+
 static void services_init(void)
 {
 	ret_code_t     err_code;
@@ -393,7 +493,23 @@ static void services_init(void)
 
 	err_code = ble_dis_init(&dis_init);
 	APP_ERROR_CHECK(err_code);
+
+	ble_dfu_buttonless_init_t dfus_init =
+	{
+		.evt_handler = ble_dfu_evt_handler
+	};
+
+	// Initialize the async SVCI interface to bootloader.
+	err_code = ble_dfu_buttonless_async_svci_init();
+	APP_ERROR_CHECK(err_code);
+
+
+	err_code = ble_dfu_buttonless_init(&dfus_init);
+	APP_ERROR_CHECK(err_code);
 }
+
+
+
 
 /**@brief Function for starting application timers.
  */
@@ -656,6 +772,24 @@ static void advertising_init(void)
 	ret_code_t             err_code;
 	ble_advertising_init_t init;
 
+	//ble_uuid_t ble_buttonless_uuid;
+
+	//ble_uuid128_t base_uuid = BLE_NORDIC_VENDOR_BASE_UUID;
+	//err_code = sd_ble_uuid_vs_add(&base_uuid, &ble_buttonless_uuid.type);
+	//APP_ERROR_CHECK(err_code);
+
+	//ble_buttonless_uuid.uuid = 0xFE59;
+
+	////ble_uuid_t digit_service_uuid;
+	////digit_service_uuid.uuid = DIGIT_UUID_SERVICE;
+	////digit_service_uuid.type = m_digit.uuid_type;
+
+	//ble_uuid_t m_adv_uuids[] =
+	//{
+	//	ble_buttonless_uuid,
+
+	//};
+
 	ble_uuid_t digit_service_uuid;
 	digit_service_uuid.uuid = DIGIT_UUID_SERVICE;
 	digit_service_uuid.type = m_digit.uuid_type;
@@ -725,9 +859,15 @@ static void battery_management_callback(battery_state_t *battery_state) {
 	//{
 	//	APP_ERROR_HANDLER(err_code);
 	//}
-	//if (battery_state->battery_low_warning) {
-	//	power_off();
-	//}
+	if (battery_state->battery_low_warning) {
+		power_off();
+	}
+}
+
+static void power_management_init(void)
+{
+	uint32_t err_code = nrf_pwr_mgmt_init();
+	APP_ERROR_CHECK(err_code);
 }
 
 
@@ -737,6 +877,7 @@ int main(void)
 {
 	log_init();
 	timers_init();
+	power_management_init();
 	ble_stack_init();
 	gap_params_init();
 	gatt_init();
