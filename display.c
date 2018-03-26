@@ -53,8 +53,10 @@ static void disp_def_uninit(void)
 	//nrf_drv_spi_uninit(&spi);
 }
 
-static void disp_def_pixel_draw(uint16_t x, uint16_t y, uint32_t color)
+static void disp_def_pixel_draw(uint16_t m_x, uint16_t m_y, uint32_t color)
 {
+	uint16_t x = 128 - m_y;
+	uint16_t y = m_x;
 	uint16_t index = 4 * y + (x / 32);
 	uint32_t mask = (1 << x % 32);
 	if (color) {

@@ -13,5 +13,17 @@
       ],
       "contextType": "custom"
     },
+    {
+      "taskName": "package",
+      "appliesTo": "pca10040/s132/armgcc/Makefile",
+      "type": "launch",
+      "command": "make",
+      "args": [
+        "package",
+        "-C",
+        "${workspaceRoot}/pca10040/s132/armgcc"
+      ],
+      "contextType": "custom"
+    }
   ]
 }

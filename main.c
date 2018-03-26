@@ -772,24 +772,6 @@ static void advertising_init(void)
 	ret_code_t             err_code;
 	ble_advertising_init_t init;
 
-	//ble_uuid_t ble_buttonless_uuid;
-
-	//ble_uuid128_t base_uuid = BLE_NORDIC_VENDOR_BASE_UUID;
-	//err_code = sd_ble_uuid_vs_add(&base_uuid, &ble_buttonless_uuid.type);
-	//APP_ERROR_CHECK(err_code);
-
-	//ble_buttonless_uuid.uuid = 0xFE59;
-
-	////ble_uuid_t digit_service_uuid;
-	////digit_service_uuid.uuid = DIGIT_UUID_SERVICE;
-	////digit_service_uuid.type = m_digit.uuid_type;
-
-	//ble_uuid_t m_adv_uuids[] =
-	//{
-	//	ble_buttonless_uuid,
-
-	//};
-
 	ble_uuid_t digit_service_uuid;
 	digit_service_uuid.uuid = DIGIT_UUID_SERVICE;
 	digit_service_uuid.type = m_digit.uuid_type;
