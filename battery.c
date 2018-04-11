@@ -3,7 +3,7 @@
 
 #include "./battery.h"
 
-#define BATTERY_LOW_THRESHOLD (720)
+#define BATTERY_LOW_THRESHOLD (710)
 static const bool uninitialize = true; //stop easydma to save power
 
 static nrf_saadc_value_t     bms_buffer;
