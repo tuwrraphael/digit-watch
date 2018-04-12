@@ -322,6 +322,6 @@ flash_dap: $(OUTPUT_DIRECTORY)/merged.hex
 	xcopy $(OUTPUT_DIRECTORY)\merged.hex E:\
 
 $(OUTPUT_DIRECTORY)/app_dfu_pkg.zip: $(OUTPUT_DIRECTORY)/nrf52832_xxaa.hex
-	nrfutil pkg generate --hw-version 52 --application-version 1 --application $(OUTPUT_DIRECTORY)/nrf52832_xxaa.hex --sd-req 0x9D --key-file D:\environments\nrf\private.key $(OUTPUT_DIRECTORY)/app_dfu_pkg.zip
+	$(SDK_ROOT)/nrfutil.exe pkg generate --hw-version 52 --application-version 1 --application $(OUTPUT_DIRECTORY)/nrf52832_xxaa.hex --sd-req 0x9D --key-file $(SDK_ROOT)/private.key $(OUTPUT_DIRECTORY)/app_dfu_pkg.zip
 
 package: $(OUTPUT_DIRECTORY)/app_dfu_pkg.zip
