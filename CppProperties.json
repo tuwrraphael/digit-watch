@@ -13,6 +13,7 @@
         "${env.NRF_SDK_ROOT}\\components\\drivers_nrf\\ppi",
         "${env.NRF_SDK_ROOT}\\components\\drivers_nrf\\gpiote",
         "${env.NRF_SDK_ROOT}\\components\\drivers_nrf\\saadc",
+        "${env.NRF_SDK_ROOT}\\components\\drivers_nrf\\twi_master",
         "${env.NRF_SDK_ROOT}\\components\\libraries\\util",
         "${env.NRF_SDK_ROOT}\\config",
         "${env.NRF_SDK_ROOT}\\components\\device",
