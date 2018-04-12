@@ -45,7 +45,7 @@
 #define APP_BLE_CONN_CFG_TAG                1                                       /**< A tag identifying the SoftDevice BLE configuration. */
 #define APP_BLE_OBSERVER_PRIO               3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 
-#define BATTERY_LEVEL_MEAS_INTERVAL         APP_TIMER_TICKS(10000)
+#define BATTERY_LEVEL_MEAS_INTERVAL         APP_TIMER_TICKS(300000)
 #define CT_TIMER_INTERVAL                   APP_TIMER_TICKS(1000)
 
 #define MIN_CONN_INTERVAL                   MSEC_TO_UNITS(400, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (0.4 seconds). */
@@ -299,6 +299,13 @@ static void pm_evt_handler(pm_evt_t const * p_evt)
 	}
 }
 
+static void power_off() {
+	app_timer_stop(ct_timer_id);
+	app_timer_stop(m_battery_timer_id);
+	display_uninit();
+	nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_STAY_IN_SYSOFF);
+}
+
 static void battery_level_meas_timeout_handler(void * p_context)
 {
 	UNUSED_PARAMETER(p_context);
@@ -467,7 +474,7 @@ static void services_init(void)
 	BLE_GAP_CONN_SEC_MODE_SET_OPEN(&bas_init.battery_level_report_read_perm);
 
 	bas_init.evt_handler = NULL;
-	bas_init.support_notification = true;
+	bas_init.support_notification = false;
 	bas_init.p_report_ref = NULL;
 	bas_init.initial_batt_level = 100;
 
@@ -812,35 +819,21 @@ static void log_init(void)
 	NRF_LOG_DEFAULT_BACKENDS_INIT();
 }
 
-/**@brief Function for the Power manager.
- */
-static void power_manage(void)
-{
-	ret_code_t err_code = sd_app_evt_wait();
-	APP_ERROR_CHECK(err_code);
-}
-
-static void power_off() {
-	app_timer_stop(ct_timer_id);
-	app_timer_stop(m_battery_timer_id);
-	display_uninit();
-	sd_power_system_off();
-}
 
 static void battery_management_callback(battery_state_t *battery_state) {
 	ret_code_t err_code;
 	uint8_t  battery_level;
 
-	//battery_level = (uint8_t)(100 * ((float)(battery_state->value) / (float)1023));
-	//err_code = ble_bas_battery_level_update(&m_bas, battery_level);
-	//if ((err_code != NRF_SUCCESS) &&
-	//	(err_code != NRF_ERROR_INVALID_STATE) &&
-	//	(err_code != NRF_ERROR_RESOURCES) &&
-	//	(err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING)
-	//	)
-	//{
-	//	APP_ERROR_HANDLER(err_code);
-	//}
+	battery_level = (uint8_t)(100 * ((float)(battery_state->value) / (float)1023));
+	err_code = ble_bas_battery_level_update(&m_bas, battery_level);
+	if ((err_code != NRF_SUCCESS) &&
+		(err_code != NRF_ERROR_INVALID_STATE) &&
+		(err_code != NRF_ERROR_RESOURCES) &&
+		(err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING)
+		)
+	{
+		APP_ERROR_HANDLER(err_code);
+	}
 	if (battery_state->battery_low_warning) {
 		power_off();
 	}
@@ -887,7 +880,7 @@ int main(void)
 	{
 		if (NRF_LOG_PROCESS() == false)
 		{
-			power_manage();
+			nrf_pwr_mgmt_run();
 		}
 	}
 }

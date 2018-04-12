@@ -36,7 +36,8 @@
         "${env.NRF_SDK_ROOT}\\components\\libraries\\sensorsim",
         "${env.NRF_SDK_ROOT}\\components\\libraries\\bootloader\\dfu",
         "${env.NRF_SDK_ROOT}\\components\\libraries\\bootloader\\ble_dfu",
-        "${env.NRF_SDK_ROOT}\\components\\libraries\\svc"
+        "${env.NRF_SDK_ROOT}\\components\\libraries\\svc",
+        "${env.NRF_SDK_ROOT}\\components\\libraries\\pwr_mgmt"
       ],
       "defines": [
         "__STATIC_INLINE"
