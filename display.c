@@ -12,8 +12,10 @@
 #include "./display.h"
 
 #define SPI_INSTANCE 1 //SPI 0 is blocked by softdevice
+#define M_PI		(3.14159265358979323846)
 
 static const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE);
+static uint32_t display_buffer[4 * 128];
 
 static void gpio_setup() {
 	nrf_gpio_cfg_output(DISPLAY_SCS);
@@ -36,7 +38,7 @@ static void spi_setup() {
 	APP_ERROR_CHECK(nrf_drv_spi_init(&spi, &spi_config, NULL, NULL));
 }
 
-static uint32_t display_buffer[4 * 128];
+
 
 static void clear_display_buffer() {
 	memset(display_buffer, 0xFFFFFFFF, sizeof(display_buffer));
@@ -167,19 +169,19 @@ void switch_display_mode() {
 	nrf_gpio_pin_write(DISPLAY_SCS, 0);
 }
 
-#define M_PI		(3.14159265358979323846)
+
 
 void draw_time_indicator(float s, float indicator_length, uint8_t thickness) {
 	
-	uint8_t x = 64 + (cos(((double)(15 - s)*M_PI) / ((double)30)) * indicator_length);
-	uint8_t y = 64 - (sin(((double)(15 - s)*M_PI) / ((double)30)) * indicator_length);
+	float arg = ((float)(15 - s)*M_PI) / ((float)30);
+	uint8_t x = 64 + (cos(arg) * indicator_length);
+	uint8_t y = 64 - (sin(arg) * indicator_length);
 	if (x < 64 || y < 64) {
 		nrf_gfx_line_t line = NRF_GFX_LINE(
 			x,
 			y,
 			64,
 			64, thickness);
-
 		APP_ERROR_CHECK(nrf_gfx_line_draw(&display_definition, &line, 1));
 	}
 	else {
