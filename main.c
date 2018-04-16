@@ -601,8 +601,6 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 	{
 	case BLE_ADV_EVT_FAST:
 		NRF_LOG_INFO("Fast advertising.");
-		err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
-		APP_ERROR_CHECK(err_code);
 		break;
 
 	case BLE_ADV_EVT_IDLE:
@@ -628,8 +626,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 	{
 	case BLE_GAP_EVT_CONNECTED:
 		NRF_LOG_INFO("Connected.");
-		err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
-		APP_ERROR_CHECK(err_code);
 		m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
 		break;
 
@@ -799,6 +795,10 @@ static void advertising_init(void)
 	init.config.ble_adv_fast_enabled = true;
 	init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;
 	init.config.ble_adv_fast_timeout = APP_ADV_TIMEOUT_IN_SECONDS;
+
+	init.config.ble_adv_slow_enabled = true;
+	init.config.ble_adv_slow_interval = 8000;
+	init.config.ble_adv_slow_timeout = 0;
 
 	init.evt_handler = on_adv_evt;
 
