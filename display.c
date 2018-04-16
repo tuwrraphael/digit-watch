@@ -112,10 +112,13 @@ static void format_line_from_buffer(uint8_t *buf, uint8_t linenr) {
 	buf++;
 	*buf = linenr;
 	uint16_t buffer_offset = linenr * 4;
-	uint8_t byte;
-	for (byte = 0; byte < 16; byte++) {
-		buf++;
-		*buf = (display_buffer[buffer_offset + (byte / 4)] >> (8 * (byte % 4))) & 0xFF;
+	uint8_t shift;
+	uint8_t index;
+	for (index = 0; index < 4; index++) {
+		for (shift = 0; shift < 32; shift += 8) {
+			buf++;
+			*buf = (display_buffer[buffer_offset + index] >> shift) & 0xFF;
+		}
 	}
 }
 
@@ -135,6 +138,7 @@ void transfer_buffer_to_display() {
 	uint8_t m_tx_buf2[254];
 	uint8_t z;
 	uint8_t i;
+	spi_setup();
 	for (z = 0; z < 10; z++)
 	{
 		for (i = 0; i < 14 && ((z * 14) + i) < 129; i++) {
@@ -167,12 +171,13 @@ void switch_display_mode() {
 	APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf3, sizeof(m_tx_buf3), NULL, 0));
 
 	nrf_gpio_pin_write(DISPLAY_SCS, 0);
+	nrf_drv_spi_uninit(&spi);
 }
 
 
 
 void draw_time_indicator(float s, float indicator_length, uint8_t thickness) {
-	
+
 	float arg = ((float)(15 - s)*M_PI) / ((float)30);
 	uint8_t x = 64 + (cos(arg) * indicator_length);
 	uint8_t y = 64 - (sin(arg) * indicator_length);
@@ -201,12 +206,12 @@ void display_init() {
 	disp_def_init();
 	init_display_spi();
 	APP_ERROR_CHECK(nrf_gfx_init(&display_definition));
+	nrf_drv_spi_uninit(&spi);
 }
 
 void display_uninit() {
 	nrf_gpio_pin_write(DISPLAY_DISP, 0);
 	//TODO extcomin teardown
-	nrf_drv_spi_uninit(&spi);
 	nrf_gpio_cfg_default(DISPLAY_SCS);
 	nrf_gpio_cfg_default(DISPLAY_DISP);
 }
