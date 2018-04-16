@@ -3123,7 +3123,7 @@
 // <e> NRF_LOG_ENABLED - Logging module for nRF5 SDK
 //==========================================================
 #ifndef NRF_LOG_ENABLED
-#define NRF_LOG_ENABLED 0
+#define NRF_LOG_ENABLED 1
 #endif
 // <e> NRF_LOG_USES_COLORS - If enabled then ANSI escape code for colors is prefixed to every string
 //==========================================================
@@ -4333,7 +4333,7 @@
 // <4=> Debug 
 
 #ifndef TWIS_CONFIG_LOG_LEVEL
-#define TWIS_CONFIG_LOG_LEVEL 3
+#define TWIS_CONFIG_LOG_LEVEL 4
 #endif
 
 // <o> TWIS_CONFIG_INFO_COLOR  - ANSI escape code prefix.
@@ -4373,7 +4373,7 @@
 // <e> TWI_CONFIG_LOG_ENABLED - Enables logging in the module.
 //==========================================================
 #ifndef TWI_CONFIG_LOG_ENABLED
-#define TWI_CONFIG_LOG_ENABLED 0
+#define TWI_CONFIG_LOG_ENABLED 1
 #endif
 // <o> TWI_CONFIG_LOG_LEVEL  - Default Severity level
  

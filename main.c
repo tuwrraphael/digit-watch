@@ -38,6 +38,7 @@
 #include "./ble_digit.h"
 #include "./time_state.h"
 #include "./battery.h"
+#include "accelerometer.h"
 
 #define APP_ADV_INTERVAL                    300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_TIMEOUT_IN_SECONDS          180                                     /**< The advertising timeout in units of seconds. */
@@ -506,6 +507,7 @@ static void services_init(void)
 		.evt_handler = ble_dfu_evt_handler
 	};
 
+#ifdef  BUTTONLESS
 	// Initialize the async SVCI interface to bootloader.
 	err_code = ble_dfu_buttonless_async_svci_init();
 	APP_ERROR_CHECK(err_code);
@@ -513,6 +515,8 @@ static void services_init(void)
 
 	err_code = ble_dfu_buttonless_init(&dfus_init);
 	APP_ERROR_CHECK(err_code);
+#endif //  BUTTONLESS
+
 }
 
 
@@ -601,8 +605,6 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 	{
 	case BLE_ADV_EVT_FAST:
 		NRF_LOG_INFO("Fast advertising.");
-		err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
-		APP_ERROR_CHECK(err_code);
 		break;
 
 	case BLE_ADV_EVT_IDLE:
@@ -628,8 +630,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 	{
 	case BLE_GAP_EVT_CONNECTED:
 		NRF_LOG_INFO("Connected.");
-		err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
-		APP_ERROR_CHECK(err_code);
 		m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
 		break;
 
@@ -800,6 +800,10 @@ static void advertising_init(void)
 	init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;
 	init.config.ble_adv_fast_timeout = APP_ADV_TIMEOUT_IN_SECONDS;
 
+	init.config.ble_adv_slow_enabled = true;
+	init.config.ble_adv_slow_interval = 8000;
+	init.config.ble_adv_slow_timeout = 0;
+
 	init.evt_handler = on_adv_evt;
 
 	err_code = ble_advertising_init(&m_advertising, &init);
@@ -860,6 +864,7 @@ int main(void)
 	advertising_init();
 	conn_params_init();
 	peer_manager_init();
+	sd_power_dcdc_mode_set(NRF_POWER_DCDC_ENABLE);
 
 	memset(&time_state.cts_date, 0, sizeof(cts_date_t));
 	time_state.time_known = false;
@@ -872,7 +877,8 @@ int main(void)
 
 	battery_management_init(battery_management_callback);
 	battery_management_trigger();
-	sd_power_dcdc_mode_set(NRF_POWER_DCDC_ENABLE);
+
+	accelerometer_init();
 
 	//power_off();
 

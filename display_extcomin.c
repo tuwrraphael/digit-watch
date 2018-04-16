@@ -18,7 +18,10 @@ void extcomin_setup()
 
 	APP_ERROR_CHECK(nrf_drv_ppi_init());
 
-	APP_ERROR_CHECK(nrf_drv_gpiote_init());	
+	if (!nrf_drv_gpiote_is_init())
+	{
+		APP_ERROR_CHECK(nrf_drv_gpiote_init());
+	}
 
 	nrf_drv_timer_config_t timer_cfg = NRF_DRV_TIMER_DEFAULT_CONFIG;
 	APP_ERROR_CHECK(nrf_drv_timer_init(&timer, &timer_cfg, timer_dummy_handler));
