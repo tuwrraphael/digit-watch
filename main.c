@@ -408,11 +408,38 @@ static void gatt_init(void)
 	APP_ERROR_CHECK(err_code);
 }
 
+static void create_adv_data_packet(ble_advdata_t *advdata) {
+	ble_uuid_t digit_service_uuid;
+	digit_service_uuid.uuid = DIGIT_UUID_SERVICE;
+	digit_service_uuid.type = m_digit.uuid_type;
+
+	ble_uuid_t m_adv_uuids[] =
+	{
+		digit_service_uuid
+	};
+
+	uint8_t data[] = { time_state.time_known };
+	ble_advdata_manuf_data_t manuf_specific_data;
+	manuf_specific_data.company_identifier = 89;
+	manuf_specific_data.data.p_data = data;
+	manuf_specific_data.data.size = sizeof(data);
+
+	advdata->name_type = BLE_ADVDATA_FULL_NAME;
+	advdata->include_appearance = true;
+	advdata->flags = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
+	advdata->uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
+	advdata->uuids_complete.p_uuids = m_adv_uuids;
+	advdata->p_manuf_specific_data = &manuf_specific_data;
+}
+
 
 static void cts_received(cts_date_t *date) {
 	memcpy(&time_state.cts_date, date, sizeof(cts_date_t));
 	NRF_LOG_INFO("cts received, %d, %d, %d", date->hour, date->minute, date->second);
 	time_state.time_known = true;
+	ble_advdata_t advdata;
+	create_adv_data_packet(&advdata);
+	ble_advdata_set(&advdata, NULL);
 }
 
 // YOUR_JOB: Update this code if you want to do anything given a DFU event (optional).
@@ -483,7 +510,6 @@ static void services_init(void)
 
 	memset(&digit_init, 0, sizeof(digit_init));
 
-	digit_init.support_notification = true;
 	digit_init.initial_value = 100;
 	digit_init.cts_received = cts_received;
 
@@ -775,34 +801,20 @@ static void advertising_init(void)
 	ret_code_t             err_code;
 	ble_advertising_init_t init;
 
-	ble_uuid_t digit_service_uuid;
-	digit_service_uuid.uuid = DIGIT_UUID_SERVICE;
-	digit_service_uuid.type = m_digit.uuid_type;
-
-	ble_uuid_t m_adv_uuids[] =
-	{
-		digit_service_uuid
-	};
-
 	memset(&init, 0, sizeof(init));
 
-	init.advdata.name_type = BLE_ADVDATA_FULL_NAME;
-	init.advdata.include_appearance = true;
-	init.advdata.flags = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
-	init.advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
-	init.advdata.uuids_complete.p_uuids = m_adv_uuids;
-
+	create_adv_data_packet(&init.advdata);
 	init.config.ble_adv_fast_enabled = true;
 	init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;
 	init.config.ble_adv_fast_timeout = APP_ADV_TIMEOUT_IN_SECONDS;
-
 	init.config.ble_adv_slow_enabled = true;
-	init.config.ble_adv_slow_interval = 8000;
+	init.config.ble_adv_slow_interval = 12800; // 8 Sekunden
 	init.config.ble_adv_slow_timeout = 0;
 
 	init.evt_handler = on_adv_evt;
 
 	err_code = ble_advertising_init(&m_advertising, &init);
+
 	APP_ERROR_CHECK(err_code);
 
 	ble_advertising_conn_cfg_tag_set(&m_advertising, APP_BLE_CONN_CFG_TAG);

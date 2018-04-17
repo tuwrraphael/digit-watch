@@ -34,7 +34,6 @@ static void on_write(ble_digit_t * p_digit, ble_evt_t const * p_ble_evt)
 		return;
 		//CCCD event handler stuff
 	}
-
 	if ((p_evt_write->handle == p_digit->value_char_handles.value_handle)) {
 		if (p_evt_write->len == 9) {
 			cts_date_t cts_date;
