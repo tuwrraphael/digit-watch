@@ -621,8 +621,6 @@ static void conn_params_init(void)
  */
 static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 {
-	ret_code_t err_code;
-
 	switch (ble_adv_evt)
 	{
 	case BLE_ADV_EVT_FAST:
