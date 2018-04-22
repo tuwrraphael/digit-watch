@@ -48,10 +48,10 @@
 #define BATTERY_LEVEL_MEAS_INTERVAL         APP_TIMER_TICKS(300000)
 #define CT_TIMER_INTERVAL                   APP_TIMER_TICKS(1000)
 
-#define MIN_CONN_INTERVAL                   MSEC_TO_UNITS(400, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (0.4 seconds). */
-#define MAX_CONN_INTERVAL                   MSEC_TO_UNITS(650, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (0.65 second). */
-#define SLAVE_LATENCY                       0                                       /**< Slave latency. */
-#define CONN_SUP_TIMEOUT                    MSEC_TO_UNITS(4000, UNIT_10_MS)         /**< Connection supervisory timeout (4 seconds). */
+#define MIN_CONN_INTERVAL                   MSEC_TO_UNITS(3000, UNIT_1_25_MS)
+#define MAX_CONN_INTERVAL                   MSEC_TO_UNITS(4000, UNIT_1_25_MS)
+#define SLAVE_LATENCY                       2                                       /**< Slave latency. */
+#define CONN_SUP_TIMEOUT                    MSEC_TO_UNITS(32000, UNIT_10_MS)        /**< Connection supervisory timeout (4 seconds). */
 
 #define FIRST_CONN_PARAMS_UPDATE_DELAY      APP_TIMER_TICKS(5000)                   /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (5 seconds). */
 #define NEXT_CONN_PARAMS_UPDATE_DELAY       APP_TIMER_TICKS(30000)                  /**< Time between each call to sd_ble_gap_conn_param_update after the first call (30 seconds). */
@@ -302,6 +302,7 @@ static void pm_evt_handler(pm_evt_t const * p_evt)
 static void power_off() {
 	app_timer_stop(ct_timer_id);
 	app_timer_stop(m_battery_timer_id);
+	ble_conn_params_stop();
 	display_uninit();
 	nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_STAY_IN_SYSOFF);
 }
