@@ -3,7 +3,7 @@
 
 #define DISPLAY_SCS (6)
 #define DISPLAY_EXTCOMIN (8)
-#define DISPLAY_DISP (11)
+#define DISPLAY_DISP (10)
 #define DISPLAY_MOSI (4)
 #define DISPLAY_SCK (3)
 
@@ -19,5 +19,9 @@ void draw_time_indicator(float s, float indicator_length, uint8_t thickness);
 void switch_display_mode();
 
 void display_uninit();
+
+void display_enable();
+
+void display_disable();
 
 #endif // !APP_DISPLAY_H

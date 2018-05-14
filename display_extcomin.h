@@ -3,4 +3,8 @@
 
 void extcomin_setup();
 
+void extcomin_enable();
+
+void extcomin_disable();
+
 #endif // !APP_DISPLAY_EXTCOMIN_H

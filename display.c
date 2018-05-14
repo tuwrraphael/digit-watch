@@ -16,13 +16,26 @@
 
 static const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE);
 static uint32_t display_buffer[4 * 128];
+static bool display_enabled = false;
+
+__STATIC_INLINE void scs_set()
+{
+	nrf_gpio_pin_write(DISPLAY_SCS, 1);
+	nrf_delay_us(4);
+}
+
+__STATIC_INLINE void scs_release()
+{
+	nrf_delay_us(1);
+	nrf_gpio_pin_write(DISPLAY_SCS, 0);
+	nrf_delay_us(1);
+}
 
 static void gpio_setup() {
 	nrf_gpio_cfg_output(DISPLAY_SCS);
 	nrf_gpio_cfg_output(DISPLAY_DISP);
 
 	nrf_gpio_pin_write(DISPLAY_SCS, 0);
-	nrf_delay_ms(1);
 	nrf_gpio_pin_write(DISPLAY_DISP, 0);
 }
 
@@ -39,7 +52,6 @@ static void spi_setup() {
 }
 
 
-
 static void clear_display_buffer() {
 	memset(display_buffer, 0xFFFFFFFF, sizeof(display_buffer));
 }
@@ -52,7 +64,7 @@ static ret_code_t disp_def_init(void)
 
 static void disp_def_uninit(void)
 {
-	//nrf_drv_spi_uninit(&spi);
+
 }
 
 static void disp_def_pixel_draw(uint16_t m_x, uint16_t m_y, uint32_t color)
@@ -126,18 +138,19 @@ static void format_line_from_buffer(uint8_t *buf, uint8_t linenr) {
 //static const nrf_gfx_font_desc_t * p_font = &orkney_8ptFontInfo;
 
 static void init_display_spi() {
-	nrf_gpio_pin_write(DISPLAY_DISP, 1);
 	uint8_t m_tx_buf[] = { 4,0 };
-	nrf_gpio_pin_write(DISPLAY_SCS, 1);
-	nrf_delay_ms(1);
+	scs_set();
 	APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf, sizeof(m_tx_buf), NULL, 0));
-	nrf_gpio_pin_write(DISPLAY_SCS, 0);
+	scs_release();
 }
 
 void transfer_buffer_to_display() {
 	uint8_t m_tx_buf2[254];
 	uint8_t z;
 	uint8_t i;
+	if (!display_enabled) {
+		return;
+	}
 	spi_setup();
 	for (z = 0; z < 10; z++)
 	{
@@ -150,31 +163,23 @@ void transfer_buffer_to_display() {
 		m_tx_buf2[14 * 18] = 0;
 		m_tx_buf2[14 * 18 + 1] = 0;
 
-
-		nrf_gpio_pin_write(DISPLAY_SCS, 1);
-		nrf_delay_ms(1);
-
+		scs_set();
 		APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf2, 14 * 18 + 2, NULL, 0));
-
-		nrf_gpio_pin_write(DISPLAY_SCS, 0);
-		nrf_delay_ms(1);
+		scs_release();
 	}
 	clear_display_buffer();
 }
 
 void switch_display_mode() {
+	if (!display_enabled) {
+		return;
+	}
 	uint8_t m_tx_buf3[] = { 0,0 };
-
-	nrf_gpio_pin_write(DISPLAY_SCS, 1);
-	nrf_delay_ms(1);
-
+	scs_set();
 	APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf3, sizeof(m_tx_buf3), NULL, 0));
-
-	nrf_gpio_pin_write(DISPLAY_SCS, 0);
+	scs_release();
 	nrf_drv_spi_uninit(&spi);
 }
-
-
 
 void draw_time_indicator(float s, float indicator_length, uint8_t thickness) {
 
@@ -202,16 +207,31 @@ void draw_time_indicator(float s, float indicator_length, uint8_t thickness) {
 void display_init() {
 	gpio_setup();
 	extcomin_setup();
-	spi_setup();
-	disp_def_init();
-	init_display_spi();
+	display_enable();
 	APP_ERROR_CHECK(nrf_gfx_init(&display_definition));
+}
+
+// ensure spi is down already
+void display_disable() {
+	display_enabled = false;
+	nrf_gpio_pin_write(DISPLAY_DISP, 0);
+	extcomin_disable();
+	nrf_gpio_cfg_default(DISPLAY_SCK);
+	nrf_gpio_cfg_default(DISPLAY_MOSI);
+}
+
+void display_enable() {
+	extcomin_enable();
+	spi_setup();
+	nrf_gpio_pin_write(DISPLAY_DISP, 1);
+	nrf_delay_us(100);
+	init_display_spi();
 	nrf_drv_spi_uninit(&spi);
+	display_enabled = true;
 }
 
 void display_uninit() {
-	nrf_gpio_pin_write(DISPLAY_DISP, 0);
-	//TODO extcomin teardown
-	nrf_gpio_cfg_default(DISPLAY_SCS);
-	nrf_gpio_cfg_default(DISPLAY_DISP);
+	display_disable();
+	//TODO extcomin uninit
+	nrf_gfx_uninit(&display_definition);
 }

@@ -6,7 +6,7 @@
 #define BATTERY_LOW_THRESHOLD (710)
 static const bool uninitialize = true; //stop easydma to save power
 
-static nrf_saadc_value_t     bms_buffer;
+static nrf_saadc_value_t bms_buffer;
 static battery_management_callback_t bms_callback;
 static battery_state_t battery_state;
 static bool initialized = false;
@@ -48,7 +48,6 @@ static ret_code_t init_adc(void) {
 
 ret_code_t battery_management_init(battery_management_callback_t callback)
 {
-	VERIFY_SUCCESS(init_adc());
 	if (NULL == callback) {
 		return NRF_ERROR_INVALID_PARAM;
 	}
