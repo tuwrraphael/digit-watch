@@ -1,0 +1,19 @@
+{
+    "configurations": [
+        {
+            "name": "pca10040/s132",
+            "includePath": [
+                "${workspaceFolder}/pca10040/s132/config",
+                "${env:NRF_SDK_ROOT}/**"
+            ],
+            "compilerPath": "${env:ARM_GCC_BIN}/arm-none-eabi-gcc.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "clang-x64",
+            "defines": [
+                "__STATIC_INLINE"
+            ]
+        }
+    ],
+    "version": 4
+}

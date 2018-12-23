@@ -1,85 +1,285 @@
+/**
+ * Copyright (c) 2014 - 2018, Nordic Semiconductor ASA
+ *
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form, except as embedded into a Nordic
+ *    Semiconductor ASA integrated circuit in a product or a software update for
+ *    such product, must reproduce the above copyright notice, this list of
+ *    conditions and the following disclaimer in the documentation and/or other
+ *    materials provided with the distribution.
+ *
+ * 3. Neither the name of Nordic Semiconductor ASA nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * 4. This software, with or without modification, must only be used with a
+ *    Nordic Semiconductor ASA integrated circuit.
+ *
+ * 5. Any software provided in binary form under this license must not be reverse
+ *    engineered, decompiled, modified and/or disassembled.
+ *
+ * THIS SOFTWARE IS PROVIDED BY NORDIC SEMICONDUCTOR ASA "AS IS" AND ANY EXPRESS
+ * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL NORDIC SEMICONDUCTOR ASA OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+/** @example examples/ble_peripheral/ble_app_buttonless_dfu
+ *
+ * @brief Secure DFU Buttonless Service Application main file.
+ *
+ * This file contains the source code for a sample application using the proprietary
+ * Secure DFU Buttonless Service. This is a template application that can be modified
+ * to your needs. To extend the functionality of this application, please find
+ * locations where the comment "// YOUR_JOB:" is present and read the comments.
+ */
+
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+
+#include "nrf_dfu_ble_svci_bond_sharing.h"
+#include "nrf_svci_async_function.h"
+#include "nrf_svci_async_handler.h"
+
 #include "nordic_common.h"
 #include "nrf.h"
-#include "nrf_sdm.h"
 #include "app_error.h"
 #include "ble.h"
-#include "ble_err.h"
 #include "ble_hci.h"
 #include "ble_srv_common.h"
 #include "ble_advdata.h"
 #include "ble_advertising.h"
-#include "ble_bas.h"
-#include "ble_dis.h"
 #include "ble_conn_params.h"
 #include "nrf_sdh.h"
-#include "nrf_sdh_ble.h"
 #include "nrf_sdh_soc.h"
+#include "nrf_sdh_ble.h"
 #include "app_timer.h"
-#include "bsp_btn_ble.h"
 #include "peer_manager.h"
-#include "fds.h"
-#include "nrf_ble_gatt.h"
+#include "peer_manager_handler.h"
+#include "bsp_btn_ble.h"
+#include "ble_hci.h"
+#include "ble_advdata.h"
+#include "ble_advertising.h"
 #include "ble_conn_state.h"
-
+#include "ble_dfu.h"
+#include "nrf_ble_gatt.h"
+#include "nrf_ble_qwr.h"
+#include "fds.h"
+#include "nrf_pwr_mgmt.h"
+#include "nrf_drv_clock.h"
+#include "nrf_power.h"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
+#include "nrf_bootloader_info.h"
 
-#include "nrf_dfu_svci.h"
-#include "nrf_svci_async_function.h"
-#include "nrf_svci_async_handler.h"
-#include "ble_dfu.h"
-#include "nrf_pwr_mgmt.h"
+#define DEVICE_NAME                     "Nordic_Buttonless"                         /**< Name of device. Will be included in the advertising data. */
+#define MANUFACTURER_NAME               "NordicSemiconductor"                       /**< Manufacturer. Will be passed to Device Information Service. */
+#define APP_ADV_INTERVAL                300                                         /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
+#define APP_ADV_DURATION                18000                                       /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
 
-#include "./device_information.h"
-#include "./display.h"
-#include "./ble_digit.h"
-#include "./time_state.h"
-#include "./battery.h"
+#define APP_BLE_OBSERVER_PRIO           3                                           /**< Application's BLE observer priority. You shouldn't need to modify this value. */
+#define APP_BLE_CONN_CFG_TAG            1                                           /**< A tag identifying the SoftDevice BLE configuration. */
 
-#define APP_ADV_INTERVAL                    300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
-#define APP_ADV_TIMEOUT_IN_SECONDS          180                                     /**< The advertising timeout in units of seconds. */
+#define MIN_CONN_INTERVAL               MSEC_TO_UNITS(100, UNIT_1_25_MS)            /**< Minimum acceptable connection interval (0.1 seconds). */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(200, UNIT_1_25_MS)            /**< Maximum acceptable connection interval (0.2 second). */
+#define SLAVE_LATENCY                   0                                           /**< Slave latency. */
+#define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)             /**< Connection supervisory timeout (4 seconds). */
 
-#define APP_BLE_CONN_CFG_TAG                1                                       /**< A tag identifying the SoftDevice BLE configuration. */
-#define APP_BLE_OBSERVER_PRIO               3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
+#define FIRST_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(5000)                       /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (5 seconds). */
+#define NEXT_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(30000)                      /**< Time between each call to sd_ble_gap_conn_param_update after the first call (30 seconds). */
+#define MAX_CONN_PARAMS_UPDATE_COUNT    3                                           /**< Number of attempts before giving up the connection parameter negotiation. */
 
-#define BATTERY_LEVEL_MEAS_INTERVAL         APP_TIMER_TICKS(300000)
-#define CT_TIMER_INTERVAL                   APP_TIMER_TICKS(1000)
+#define SEC_PARAM_BOND                  1                                           /**< Perform bonding. */
+#define SEC_PARAM_MITM                  0                                           /**< Man In The Middle protection not required. */
+#define SEC_PARAM_LESC                  0                                           /**< LE Secure Connections not enabled. */
+#define SEC_PARAM_KEYPRESS              0                                           /**< Keypress notifications not enabled. */
+#define SEC_PARAM_IO_CAPABILITIES       BLE_GAP_IO_CAPS_NONE                        /**< No I/O capabilities. */
+#define SEC_PARAM_OOB                   0                                           /**< Out Of Band data not available. */
+#define SEC_PARAM_MIN_KEY_SIZE          7                                           /**< Minimum encryption key size. */
+#define SEC_PARAM_MAX_KEY_SIZE          16                                          /**< Maximum encryption key size. */
 
-#define MIN_CONN_INTERVAL                   MSEC_TO_UNITS(3000, UNIT_1_25_MS)
-#define MAX_CONN_INTERVAL                   MSEC_TO_UNITS(4000, UNIT_1_25_MS)
-#define SLAVE_LATENCY                       2                                       /**< Slave latency. */
-#define CONN_SUP_TIMEOUT                    MSEC_TO_UNITS(32000, UNIT_10_MS)        /**< Connection supervisory timeout (4 seconds). */
+#define DEAD_BEEF                       0xDEADBEEF                                  /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
-#define FIRST_CONN_PARAMS_UPDATE_DELAY      APP_TIMER_TICKS(5000)                   /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (5 seconds). */
-#define NEXT_CONN_PARAMS_UPDATE_DELAY       APP_TIMER_TICKS(30000)                  /**< Time between each call to sd_ble_gap_conn_param_update after the first call (30 seconds). */
-#define MAX_CONN_PARAMS_UPDATE_COUNT        3                                       /**< Number of attempts before giving up the connection parameter negotiation. */
 
-#define SEC_PARAM_BOND                      1                                       /**< Perform bonding. */
-#define SEC_PARAM_MITM                      0                                       /**< Man In The Middle protection not required. */
-#define SEC_PARAM_LESC                      0                                       /**< LE Secure Connections not enabled. */
-#define SEC_PARAM_KEYPRESS                  0                                       /**< Keypress notifications not enabled. */
-#define SEC_PARAM_IO_CAPABILITIES           BLE_GAP_IO_CAPS_NONE                    /**< No I/O capabilities. */
-#define SEC_PARAM_OOB                       0                                       /**< Out Of Band data not available. */
-#define SEC_PARAM_MIN_KEY_SIZE              7                                       /**< Minimum encryption key size. */
-#define SEC_PARAM_MAX_KEY_SIZE              16                                      /**< Maximum encryption key size. */
+NRF_BLE_GATT_DEF(m_gatt);                                                           /**< GATT module instance. */
+NRF_BLE_QWR_DEF(m_qwr);                                                             /**< Context for the Queued Write module.*/
+BLE_ADVERTISING_DEF(m_advertising);                                                 /**< Advertising module instance. */
 
-#define DEAD_BEEF                           0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
+static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                            /**< Handle of the current connection. */
+static void advertising_start(bool erase_bonds);                                    /**< Forward declaration of advertising start function */
 
-#define APP_FEATURE_NOT_SUPPORTED           BLE_GATT_STATUS_ATTERR_APP_BEGIN + 2    /**< Reply when unsupported features are requested. */
+// YOUR_JOB: Use UUIDs for service(s) used in your application.
+static ble_uuid_t m_adv_uuids[] = {{BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE}};
 
-BLE_BAS_DEF(m_bas);                                                 /**< Structure used to identify the battery service. */
-BLE_DIGIT_DEF(m_digit);
-NRF_BLE_GATT_DEF(m_gatt);                                           /**< GATT module instance. */
-BLE_ADVERTISING_DEF(m_advertising);                                 /**< Advertising module instance. */
-APP_TIMER_DEF(m_battery_timer_id);
-APP_TIMER_DEF(ct_timer_id);
+/**@brief Handler for shutdown preparation.
+ *
+ * @details During shutdown procedures, this function will be called at a 1 second interval
+ *          untill the function returns true. When the function returns true, it means that the
+ *          app is ready to reset to DFU mode.
+ *
+ * @param[in]   event   Power manager event.
+ *
+ * @retval  True if shutdown is allowed by this power manager handler, otherwise false.
+ */
+static bool app_shutdown_handler(nrf_pwr_mgmt_evt_t event)
+{
+    switch (event)
+    {
+        case NRF_PWR_MGMT_EVT_PREPARE_DFU:
+            NRF_LOG_INFO("Power management wants to reset to DFU mode.");
+            // YOUR_JOB: Get ready to reset into DFU mode
+            //
+            // If you aren't finished with any ongoing tasks, return "false" to
+            // signal to the system that reset is impossible at this stage.
+            //
+            // Here is an example using a variable to delay resetting the device.
+            //
+            // if (!m_ready_for_reset)
+            // {
+            //      return false;
+            // }
+            // else
+            //{
+            //
+            //    // Device ready to enter
+            //    uint32_t err_code;
+            //    err_code = sd_softdevice_disable();
+            //    APP_ERROR_CHECK(err_code);
+            //    err_code = app_timer_stop_all();
+            //    APP_ERROR_CHECK(err_code);
+            //}
+            break;
 
-static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;    /**< Handle of the current connection. */
+        default:
+            // YOUR_JOB: Implement any of the other events available from the power management module:
+            //      -NRF_PWR_MGMT_EVT_PREPARE_SYSOFF
+            //      -NRF_PWR_MGMT_EVT_PREPARE_WAKEUP
+            //      -NRF_PWR_MGMT_EVT_PREPARE_RESET
+            return true;
+    }
 
-static time_state_t time_state;
+    NRF_LOG_INFO("Power management allowed to reset to DFU mode.");
+    return true;
+}
+
+//lint -esym(528, m_app_shutdown_handler)
+/**@brief Register application shutdown handler with priority 0.
+ */
+NRF_PWR_MGMT_HANDLER_REGISTER(app_shutdown_handler, 0);
+
+
+static void buttonless_dfu_sdh_state_observer(nrf_sdh_state_evt_t state, void * p_context)
+{
+    if (state == NRF_SDH_EVT_STATE_DISABLED)
+    {
+        // Softdevice was disabled before going into reset. Inform bootloader to skip CRC on next boot.
+        nrf_power_gpregret2_set(BOOTLOADER_DFU_SKIP_CRC);
+
+        //Go to system off.
+        nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_GOTO_SYSOFF);
+    }
+}
+
+/* nrf_sdh state observer. */
+NRF_SDH_STATE_OBSERVER(m_buttonless_dfu_state_obs, 0) =
+{
+    .handler = buttonless_dfu_sdh_state_observer,
+};
+
+
+static void advertising_config_get(ble_adv_modes_config_t * p_config)
+{
+    memset(p_config, 0, sizeof(ble_adv_modes_config_t));
+
+    p_config->ble_adv_fast_enabled  = true;
+    p_config->ble_adv_fast_interval = APP_ADV_INTERVAL;
+    p_config->ble_adv_fast_timeout  = APP_ADV_DURATION;
+}
+
+
+static void disconnect(uint16_t conn_handle, void * p_context)
+{
+    UNUSED_PARAMETER(p_context);
+
+    ret_code_t err_code = sd_ble_gap_disconnect(conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+    if (err_code != NRF_SUCCESS)
+    {
+        NRF_LOG_WARNING("Failed to disconnect connection. Connection handle: %d Error: %d", conn_handle, err_code);
+    }
+    else
+    {
+        NRF_LOG_DEBUG("Disconnected connection handle %d", conn_handle);
+    }
+}
+
+
+
+// YOUR_JOB: Update this code if you want to do anything given a DFU event (optional).
+/**@brief Function for handling dfu events from the Buttonless Secure DFU service
+ *
+ * @param[in]   event   Event from the Buttonless Secure DFU service.
+ */
+static void ble_dfu_evt_handler(ble_dfu_buttonless_evt_type_t event)
+{
+    switch (event)
+    {
+        case BLE_DFU_EVT_BOOTLOADER_ENTER_PREPARE:
+        {
+            NRF_LOG_INFO("Device is preparing to enter bootloader mode.");
+
+            // Prevent device from advertising on disconnect.
+            ble_adv_modes_config_t config;
+            advertising_config_get(&config);
+            config.ble_adv_on_disconnect_disabled = true;
+            ble_advertising_modes_config_set(&m_advertising, &config);
+
+            // Disconnect all other bonded devices that currently are connected.
+            // This is required to receive a service changed indication
+            // on bootup after a successful (or aborted) Device Firmware Update.
+            uint32_t conn_count = ble_conn_state_for_each_connected(disconnect, NULL);
+            NRF_LOG_INFO("Disconnected %d links.", conn_count);
+            break;
+        }
+
+        case BLE_DFU_EVT_BOOTLOADER_ENTER:
+            // YOUR_JOB: Write app-specific unwritten data to FLASH, control finalization of this
+            //           by delaying reset by reporting false in app_shutdown_handler
+            NRF_LOG_INFO("Device will enter bootloader mode.");
+            break;
+
+        case BLE_DFU_EVT_BOOTLOADER_ENTER_FAILED:
+            NRF_LOG_ERROR("Request to enter bootloader mode failed asynchroneously.");
+            // YOUR_JOB: Take corrective measures to resolve the issue
+            //           like calling APP_ERROR_CHECK to reset the device.
+            break;
+
+        case BLE_DFU_EVT_RESPONSE_SEND_ERROR:
+            NRF_LOG_ERROR("Request to send a response to client failed.");
+            // YOUR_JOB: Take corrective measures to resolve the issue
+            //           like calling APP_ERROR_CHECK to reset the device.
+            APP_ERROR_CHECK(false);
+            break;
+
+        default:
+            NRF_LOG_ERROR("Unknown event from ble_dfu_buttonless.");
+            break;
+    }
+}
 
 
 /**@brief Callback function for asserts in the SoftDevice.
@@ -95,106 +295,7 @@ static time_state_t time_state;
  */
 void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
 {
-	app_error_handler(DEAD_BEEF, line_num, p_file_name);
-}
-
-/**@brief Handler for shutdown preparation.
-*
-* @details During shutdown procedures, this function will be called at a 1 second interval
-*          untill the function returns true. When the function returns true, it means that the
-*          app is ready to reset to DFU mode.
-*
-* @param[in]   event   Power manager event.
-*
-* @retval  True if shutdown is allowed by this power manager handler, otherwise false.
-*/
-static bool app_shutdown_handler(nrf_pwr_mgmt_evt_t event)
-{
-	switch (event)
-	{
-	case NRF_PWR_MGMT_EVT_PREPARE_DFU:
-		NRF_LOG_INFO("Power management wants to reset to DFU mode.");
-		// YOUR_JOB: Get ready to reset into DFU mode
-		//
-		// If you aren't finished with any ongoing tasks, return "false" to
-		// signal to the system that reset is impossible at this stage.
-		//
-		// Here is an example using a variable to delay resetting the device.
-		//
-		// if (!m_ready_for_reset)
-		// {
-		//      return false;
-		// }
-		// else
-		//{
-		//
-		//    // Device ready to enter
-		//    uint32_t err_code;
-		//    err_code = sd_softdevice_disable();
-		//    APP_ERROR_CHECK(err_code);
-		//    err_code = app_timer_stop_all();
-		//    APP_ERROR_CHECK(err_code);
-		//}
-		break;
-
-	default:
-		// YOUR_JOB: Implement any of the other events available from the power management module:
-		//      -NRF_PWR_MGMT_EVT_PREPARE_SYSOFF
-		//      -NRF_PWR_MGMT_EVT_PREPARE_WAKEUP
-		//      -NRF_PWR_MGMT_EVT_PREPARE_RESET
-		return true;
-	}
-
-	NRF_LOG_INFO("Power management allowed to reset to DFU mode.");
-	return true;
-}
-NRF_PWR_MGMT_HANDLER_REGISTER(app_shutdown_handler, 0);
-
-
-
-/**@brief Clear bond information from persistent storage.
- */
-static void delete_bonds(void)
-{
-	ret_code_t err_code;
-
-	NRF_LOG_INFO("Erase bonds!");
-
-	err_code = pm_peers_delete();
-	APP_ERROR_CHECK(err_code);
-}
-
-
-/**@brief Function for starting advertising.
- */
-void advertising_start(bool erase_bonds)
-{
-	if (erase_bonds == true)
-	{
-		delete_bonds();
-		// Advertising is started by PM_EVT_PEERS_DELETE_SUCCEEDED event.
-	}
-	else
-	{
-		ret_code_t err_code;
-
-		err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
-		APP_ERROR_CHECK(err_code);
-	}
-}
-
-
-/**@brief Function for handling File Data Storage events.
- *
- * @param[in] p_evt  Peer Manager event.
- * @param[in] cmd
- */
-static void fds_evt_handler(fds_evt_t const * const p_evt)
-{
-	if (p_evt->id == FDS_EVT_GC)
-	{
-		NRF_LOG_DEBUG("GC completed\n");
-	}
+    app_error_handler(DEAD_BEEF, line_num, p_file_name);
 }
 
 
@@ -204,154 +305,31 @@ static void fds_evt_handler(fds_evt_t const * const p_evt)
  */
 static void pm_evt_handler(pm_evt_t const * p_evt)
 {
-	ret_code_t err_code;
-
-	switch (p_evt->evt_id)
-	{
-	case PM_EVT_BONDED_PEER_CONNECTED:
-	{
-		NRF_LOG_INFO("Connected to a previously bonded device.");
-	} break;
-
-	case PM_EVT_CONN_SEC_SUCCEEDED:
-	{
-		NRF_LOG_INFO("Connection secured: role: %d, conn_handle: 0x%x, procedure: %d.",
-			ble_conn_state_role(p_evt->conn_handle),
-			p_evt->conn_handle,
-			p_evt->params.conn_sec_succeeded.procedure);
-	} break;
-
-	case PM_EVT_CONN_SEC_FAILED:
-	{
-		/* Often, when securing fails, it shouldn't be restarted, for security reasons.
-		 * Other times, it can be restarted directly.
-		 * Sometimes it can be restarted, but only after changing some Security Parameters.
-		 * Sometimes, it cannot be restarted until the link is disconnected and reconnected.
-		 * Sometimes it is impossible, to secure the link, or the peer device does not support it.
-		 * How to handle this error is highly application dependent. */
-	} break;
-
-	case PM_EVT_CONN_SEC_CONFIG_REQ:
-	{
-		// Reject pairing request from an already bonded peer.
-		pm_conn_sec_config_t conn_sec_config = { .allow_repairing = false };
-		pm_conn_sec_config_reply(p_evt->conn_handle, &conn_sec_config);
-	} break;
-
-	case PM_EVT_STORAGE_FULL:
-	{
-		// Run garbage collection on the flash.
-		err_code = fds_gc();
-		if (err_code == FDS_ERR_BUSY || err_code == FDS_ERR_NO_SPACE_IN_QUEUES)
-		{
-			// Retry.
-		}
-		else
-		{
-			APP_ERROR_CHECK(err_code);
-		}
-	} break;
-
-	case PM_EVT_PEERS_DELETE_SUCCEEDED:
-	{
-		NRF_LOG_DEBUG("PM_EVT_PEERS_DELETE_SUCCEEDED");
-		advertising_start(false);
-	} break;
-
-	case PM_EVT_LOCAL_DB_CACHE_APPLY_FAILED:
-	{
-		// The local database has likely changed, send service changed indications.
-		pm_local_database_has_changed();
-	} break;
-
-	case PM_EVT_PEER_DATA_UPDATE_FAILED:
-	{
-		// Assert.
-		APP_ERROR_CHECK(p_evt->params.peer_data_update_failed.error);
-	} break;
-
-	case PM_EVT_PEER_DELETE_FAILED:
-	{
-		// Assert.
-		APP_ERROR_CHECK(p_evt->params.peer_delete_failed.error);
-	} break;
-
-	case PM_EVT_PEERS_DELETE_FAILED:
-	{
-		// Assert.
-		APP_ERROR_CHECK(p_evt->params.peers_delete_failed_evt.error);
-	} break;
-
-	case PM_EVT_ERROR_UNEXPECTED:
-	{
-		// Assert.
-		APP_ERROR_CHECK(p_evt->params.error_unexpected.error);
-	} break;
-
-	case PM_EVT_CONN_SEC_START:
-	case PM_EVT_PEER_DATA_UPDATE_SUCCEEDED:
-	case PM_EVT_PEER_DELETE_SUCCEEDED:
-	case PM_EVT_LOCAL_DB_CACHE_APPLIED:
-	case PM_EVT_SERVICE_CHANGED_IND_SENT:
-	case PM_EVT_SERVICE_CHANGED_IND_CONFIRMED:
-	default:
-		break;
-	}
+    pm_handler_on_pm_evt(p_evt);
+    pm_handler_flash_clean(p_evt);
 }
 
-static void power_off() {
-	app_timer_stop(ct_timer_id);
-	app_timer_stop(m_battery_timer_id);
-	ble_conn_params_stop();
-	display_uninit();
-	nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_STAY_IN_SYSOFF);
-}
 
-static void battery_level_meas_timeout_handler(void * p_context)
-{
-	UNUSED_PARAMETER(p_context);
-	battery_management_trigger();
-}
-
-static void ct_timeout_handler(void * p_context)
-{
-	UNUSED_PARAMETER(p_context);
-	if (time_state.time_known) {
-		uint16_t hourDisplay = (time_state.cts_date.hour % 12);
-		hourDisplay = ((time_state.cts_date.minute * 5) / 60) + (time_state.cts_date.hour % 12) * 5;
-		draw_time_indicator(time_state.cts_date.second, 60, 1);
-		draw_time_indicator(time_state.cts_date.minute, 50, 2);
-		draw_time_indicator(hourDisplay, 35, 2);
-
-		transfer_buffer_to_display();
-
-		switch_display_mode();
-		if (time_state.cts_date.second == 59) {
-			if (time_state.cts_date.minute == 59) {
-				time_state.cts_date.hour = (time_state.cts_date.hour + 1) % 24;
-			}
-			time_state.cts_date.minute = (time_state.cts_date.minute + 1) % 60;
-		}
-		time_state.cts_date.second = (time_state.cts_date.second + 1) % 60;
-	}
-}
-
+/**@brief Function for the Timer initialization.
+ *
+ * @details Initializes the timer module. This creates and starts application timers.
+ */
 static void timers_init(void)
 {
-	ret_code_t err_code;
 
-	err_code = app_timer_init();
-	APP_ERROR_CHECK(err_code);
+    // Initialize timer module.
+    uint32_t err_code = app_timer_init();
+    APP_ERROR_CHECK(err_code);
 
-	err_code = app_timer_create(&m_battery_timer_id,
-		APP_TIMER_MODE_REPEATED,
-		battery_level_meas_timeout_handler);
-	APP_ERROR_CHECK(err_code);
+    // Create timers.
 
-	err_code = app_timer_create(&ct_timer_id,
-		APP_TIMER_MODE_REPEATED,
-		ct_timeout_handler);
-	APP_ERROR_CHECK(err_code);
+    /* YOUR_JOB: Create any timers to be used by the application.
+                 Below is an example of how to create a timer.
+                 For every new timer needed, increase the value of the macro APP_TIMER_MAX_TIMERS by
+                 one.
+       uint32_t err_code;
+       err_code = app_timer_create(&m_app_timer_id, APP_TIMER_MODE_REPEATED, timer_timeout_handler);
+       APP_ERROR_CHECK(err_code); */
 }
 
 
@@ -362,199 +340,114 @@ static void timers_init(void)
  */
 static void gap_params_init(void)
 {
-	ret_code_t              err_code;
-	ble_gap_conn_params_t   gap_conn_params;
-	ble_gap_conn_sec_mode_t sec_mode;
+    uint32_t                err_code;
+    ble_gap_conn_params_t   gap_conn_params;
+    ble_gap_conn_sec_mode_t sec_mode;
 
-	BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
 
-	err_code = sd_ble_gap_device_name_set(&sec_mode,
-		(const uint8_t *)DEVICE_NAME,
-		strlen(DEVICE_NAME));
-	APP_ERROR_CHECK(err_code);
+    err_code = sd_ble_gap_device_name_set(&sec_mode,
+                                          (const uint8_t *)DEVICE_NAME,
+                                          strlen(DEVICE_NAME));
+    APP_ERROR_CHECK(err_code);
 
-	err_code = sd_ble_gap_appearance_set(BLE_APPEARANCE_GENERIC_WATCH);
-	APP_ERROR_CHECK(err_code);
+    /* YOUR_JOB: Use an appearance value matching the application's use case.
+       err_code = sd_ble_gap_appearance_set(BLE_APPEARANCE_);
+       APP_ERROR_CHECK(err_code); */
 
-	memset(&gap_conn_params, 0, sizeof(gap_conn_params));
+    memset(&gap_conn_params, 0, sizeof(gap_conn_params));
 
-	gap_conn_params.min_conn_interval = MIN_CONN_INTERVAL;
-	gap_conn_params.max_conn_interval = MAX_CONN_INTERVAL;
-	gap_conn_params.slave_latency = SLAVE_LATENCY;
-	gap_conn_params.conn_sup_timeout = CONN_SUP_TIMEOUT;
+    gap_conn_params.min_conn_interval = MIN_CONN_INTERVAL;
+    gap_conn_params.max_conn_interval = MAX_CONN_INTERVAL;
+    gap_conn_params.slave_latency     = SLAVE_LATENCY;
+    gap_conn_params.conn_sup_timeout  = CONN_SUP_TIMEOUT;
 
-	err_code = sd_ble_gap_ppcp_set(&gap_conn_params);
-	APP_ERROR_CHECK(err_code);
+    err_code = sd_ble_gap_ppcp_set(&gap_conn_params);
+    APP_ERROR_CHECK(err_code);
 }
 
 
-/**@brief GATT module event handler.
+/**@brief Function for handling Queued Write Module errors.
+ *
+ * @details A pointer to this function will be passed to each service which may need to inform the
+ *          application about an error.
+ *
+ * @param[in]   nrf_error   Error code containing information about what went wrong.
  */
-static void gatt_evt_handler(nrf_ble_gatt_t * p_gatt, nrf_ble_gatt_evt_t const * p_evt)
+static void nrf_qwr_error_handler(uint32_t nrf_error)
 {
-	if (p_evt->evt_id == NRF_BLE_GATT_EVT_ATT_MTU_UPDATED)
-	{
-		NRF_LOG_INFO("GATT ATT MTU on connection 0x%x changed to %d.",
-			p_evt->conn_handle,
-			p_evt->params.att_mtu_effective);
-	}
+    APP_ERROR_HANDLER(nrf_error);
 }
 
 
-/**@brief Function for initializing the GATT module.
+/**@brief Function for handling the YYY Service events.
+ * YOUR_JOB implement a service handler function depending on the event the service you are using can generate
+ *
+ * @details This function will be called for all YY Service events which are passed to
+ *          the application.
+ *
+ * @param[in]   p_yy_service   YY Service structure.
+ * @param[in]   p_evt          Event received from the YY Service.
+ *
+ *
+   static void on_yys_evt(ble_yy_service_t     * p_yy_service,
+                          ble_yy_service_evt_t * p_evt)
+   {
+    switch (p_evt->evt_type)
+    {
+        case BLE_YY_NAME_EVT_WRITE:
+            APPL_LOG("[APPL]: charact written with value %s. ", p_evt->params.char_xx.value.p_str);
+            break;
+
+        default:
+            // No implementation needed.
+            break;
+    }
+   }*/
+
+
+/**@brief Function for initializing services that will be used by the application.
  */
-static void gatt_init(void)
-{
-	ret_code_t err_code = nrf_ble_gatt_init(&m_gatt, gatt_evt_handler);
-	APP_ERROR_CHECK(err_code);
-}
-
-static ble_uuid_t m_adv_uuids[] =
-{
-	{ BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE }
-};
-
-static uint8_t digit_flags[] = { 0 };
-static ble_advdata_manuf_data_t manuf_specific_data;
-
-static void create_adv_data(ble_advdata_t *advdata) {
-	digit_flags[0] = time_state.time_known;
-	manuf_specific_data.company_identifier = 89;
-	manuf_specific_data.data.p_data = digit_flags;
-	manuf_specific_data.data.size = sizeof(digit_flags);
-	advdata->name_type = BLE_ADVDATA_FULL_NAME;
-	advdata->include_appearance = true;
-	advdata->flags = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
-	advdata->uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
-	advdata->uuids_complete.p_uuids = m_adv_uuids;
-	advdata->p_manuf_specific_data = &manuf_specific_data;
-}
-
-static void cts_received(cts_date_t *date) {
-	memcpy(&time_state.cts_date, date, sizeof(cts_date_t));
-	NRF_LOG_INFO("cts received, %d, %d, %d", date->hour, date->minute, date->second);
-	time_state.time_known = true;
-	ble_advdata_t advdata;
-	memset(&advdata, 0, sizeof(advdata));
-	create_adv_data(&advdata);
-	ble_advdata_set(&advdata, NULL);
-}
-
-// YOUR_JOB: Update this code if you want to do anything given a DFU event (optional).
-/**@brief Function for handling dfu events from the Buttonless Secure DFU service
-*
-* @param[in]   event   Event from the Buttonless Secure DFU service.
-*/
-static void ble_dfu_evt_handler(ble_dfu_buttonless_evt_type_t event)
-{
-	switch (event)
-	{
-	case BLE_DFU_EVT_BOOTLOADER_ENTER_PREPARE:
-		NRF_LOG_INFO("Device is preparing to enter bootloader mode.");
-		// YOUR_JOB: Disconnect all bonded devices that currently are connected.
-		//           This is required to receive a service changed indication
-		//           on bootup after a successful (or aborted) Device Firmware Update.
-		break;
-
-	case BLE_DFU_EVT_BOOTLOADER_ENTER:
-		// YOUR_JOB: Write app-specific unwritten data to FLASH, control finalization of this
-		//           by delaying reset by reporting false in app_shutdown_handler
-		NRF_LOG_INFO("Device will enter bootloader mode.");
-		break;
-
-	case BLE_DFU_EVT_BOOTLOADER_ENTER_FAILED:
-		NRF_LOG_ERROR("Request to enter bootloader mode failed asynchroneously.");
-		// YOUR_JOB: Take corrective measures to resolve the issue
-		//           like calling APP_ERROR_CHECK to reset the device.
-		break;
-
-	case BLE_DFU_EVT_RESPONSE_SEND_ERROR:
-		NRF_LOG_ERROR("Request to send a response to client failed.");
-		// YOUR_JOB: Take corrective measures to resolve the issue
-		//           like calling APP_ERROR_CHECK to reset the device.
-		APP_ERROR_CHECK(false);
-		break;
-
-	default:
-		NRF_LOG_ERROR("Unknown event from ble_dfu_buttonless.");
-		break;
-	}
-}
-
 static void services_init(void)
 {
-	ret_code_t     err_code;
-	ble_bas_init_t bas_init;
-	ble_dis_init_t dis_init;
-	ble_digit_init_t digit_init;
+    uint32_t                  err_code;
+    nrf_ble_qwr_init_t        qwr_init  = {0};
+    ble_dfu_buttonless_init_t dfus_init = {0};
 
-	// Initialize Battery Service.
-	memset(&bas_init, 0, sizeof(bas_init));
+    // Initialize Queued Write Module.
+    qwr_init.error_handler = nrf_qwr_error_handler;
 
-	// Here the sec level for the Battery Service can be changed/increased.
-	BLE_GAP_CONN_SEC_MODE_SET_OPEN(&bas_init.battery_level_char_attr_md.cccd_write_perm);
-	BLE_GAP_CONN_SEC_MODE_SET_OPEN(&bas_init.battery_level_char_attr_md.read_perm);
-	BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&bas_init.battery_level_char_attr_md.write_perm);
+    err_code = nrf_ble_qwr_init(&m_qwr, &qwr_init);
+    APP_ERROR_CHECK(err_code);
 
-	BLE_GAP_CONN_SEC_MODE_SET_OPEN(&bas_init.battery_level_report_read_perm);
+    dfus_init.evt_handler = ble_dfu_evt_handler;
 
-	bas_init.evt_handler = NULL;
-	bas_init.support_notification = false;
-	bas_init.p_report_ref = NULL;
-	bas_init.initial_batt_level = 100;
+    err_code = ble_dfu_buttonless_init(&dfus_init);
+    APP_ERROR_CHECK(err_code);
 
-	err_code = ble_bas_init(&m_bas, &bas_init);
-	APP_ERROR_CHECK(err_code);
+    /* YOUR_JOB: Add code to initialize the services used by the application.
+       uint32_t                           err_code;
+       ble_xxs_init_t                     xxs_init;
+       ble_yys_init_t                     yys_init;
 
-	memset(&digit_init, 0, sizeof(digit_init));
+       // Initialize XXX Service.
+       memset(&xxs_init, 0, sizeof(xxs_init));
 
-	digit_init.initial_value = 100;
-	digit_init.support_notification = true;
-	digit_init.cts_received = cts_received;
+       xxs_init.evt_handler                = NULL;
+       xxs_init.is_xxx_notify_supported    = true;
+       xxs_init.ble_xx_initial_value.level = 100;
 
-	err_code = ble_digit_init(&m_digit, &digit_init);
-	APP_ERROR_CHECK(err_code);
+       err_code = ble_bas_init(&m_xxs, &xxs_init);
+       APP_ERROR_CHECK(err_code);
 
-	// Initialize Device Information Service.
-	memset(&dis_init, 0, sizeof(dis_init));
+       // Initialize YYY Service.
+       memset(&yys_init, 0, sizeof(yys_init));
+       yys_init.evt_handler                  = on_yys_evt;
+       yys_init.ble_yy_initial_value.counter = 0;
 
-	ble_srv_ascii_to_utf8(&dis_init.manufact_name_str, (char *)MANUFACTURER_NAME);
-
-	BLE_GAP_CONN_SEC_MODE_SET_OPEN(&dis_init.dis_attr_md.read_perm);
-	BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&dis_init.dis_attr_md.write_perm);
-
-	err_code = ble_dis_init(&dis_init);
-	APP_ERROR_CHECK(err_code);
-
-	ble_dfu_buttonless_init_t dfus_init =
-	{
-		.evt_handler = ble_dfu_evt_handler
-	};
-
-	// Initialize the async SVCI interface to bootloader.
-	err_code = ble_dfu_buttonless_async_svci_init();
-	APP_ERROR_CHECK(err_code);
-
-
-	err_code = ble_dfu_buttonless_init(&dfus_init);
-	APP_ERROR_CHECK(err_code);
-}
-
-
-
-
-/**@brief Function for starting application timers.
- */
-static void application_timers_start(void)
-{
-	ret_code_t err_code;
-
-	// Start application timers.
-	err_code = app_timer_start(m_battery_timer_id, BATTERY_LEVEL_MEAS_INTERVAL, NULL);
-	APP_ERROR_CHECK(err_code);
-
-	err_code = app_timer_start(ct_timer_id, CT_TIMER_INTERVAL, NULL);
-	APP_ERROR_CHECK(err_code);
+       err_code = ble_yy_service_init(&yys_init, &yy_init);
+       APP_ERROR_CHECK(err_code);
+     */
 }
 
 
@@ -570,13 +463,13 @@ static void application_timers_start(void)
  */
 static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
 {
-	ret_code_t err_code;
+    uint32_t err_code;
 
-	if (p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED)
-	{
-		err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
-		APP_ERROR_CHECK(err_code);
-	}
+    if (p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED)
+    {
+        err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
+        APP_ERROR_CHECK(err_code);
+    }
 }
 
 
@@ -586,7 +479,7 @@ static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
  */
 static void conn_params_error_handler(uint32_t nrf_error)
 {
-	APP_ERROR_HANDLER(nrf_error);
+    APP_ERROR_HANDLER(nrf_error);
 }
 
 
@@ -594,23 +487,56 @@ static void conn_params_error_handler(uint32_t nrf_error)
  */
 static void conn_params_init(void)
 {
-	ret_code_t             err_code;
-	ble_conn_params_init_t cp_init;
+    uint32_t               err_code;
+    ble_conn_params_init_t cp_init;
 
-	memset(&cp_init, 0, sizeof(cp_init));
+    memset(&cp_init, 0, sizeof(cp_init));
 
-	cp_init.p_conn_params = NULL;
-	cp_init.first_conn_params_update_delay = FIRST_CONN_PARAMS_UPDATE_DELAY;
-	cp_init.next_conn_params_update_delay = NEXT_CONN_PARAMS_UPDATE_DELAY;
-	cp_init.max_conn_params_update_count = MAX_CONN_PARAMS_UPDATE_COUNT;
-	cp_init.start_on_notify_cccd_handle = BLE_GATT_HANDLE_INVALID;
-	cp_init.disconnect_on_fail = false;
-	cp_init.evt_handler = on_conn_params_evt;
-	cp_init.error_handler = conn_params_error_handler;
+    cp_init.p_conn_params                  = NULL;
+    cp_init.first_conn_params_update_delay = FIRST_CONN_PARAMS_UPDATE_DELAY;
+    cp_init.next_conn_params_update_delay  = NEXT_CONN_PARAMS_UPDATE_DELAY;
+    cp_init.max_conn_params_update_count   = MAX_CONN_PARAMS_UPDATE_COUNT;
+    cp_init.start_on_notify_cccd_handle    = BLE_GATT_HANDLE_INVALID;
+    cp_init.disconnect_on_fail             = false;
+    cp_init.evt_handler                    = on_conn_params_evt;
+    cp_init.error_handler                  = conn_params_error_handler;
 
-	err_code = ble_conn_params_init(&cp_init);
-	APP_ERROR_CHECK(err_code);
+    err_code = ble_conn_params_init(&cp_init);
+    APP_ERROR_CHECK(err_code);
 }
+
+
+/**@brief Function for starting timers.
+ */
+static void application_timers_start(void)
+{
+    /* YOUR_JOB: Start your timers. below is an example of how to start a timer.
+       uint32_t err_code;
+       err_code = app_timer_start(m_app_timer_id, TIMER_INTERVAL, NULL);
+       APP_ERROR_CHECK(err_code); */
+}
+
+
+/**@brief Function for putting the chip into sleep mode.
+ *
+ * @note This function will not return.
+ */
+static void sleep_mode_enter(void)
+{
+    uint32_t err_code = bsp_indication_set(BSP_INDICATE_IDLE);
+
+    APP_ERROR_CHECK(err_code);
+
+    // Prepare wakeup buttons.
+    err_code = bsp_btn_ble_sleep_mode_prepare();
+    APP_ERROR_CHECK(err_code);
+
+    //Disable SoftDevice. It is required to be able to write to GPREGRET2 register (SoftDevice API blocks it).
+    //GPREGRET2 register holds the information about skipping CRC check on next boot.
+    err_code = nrf_sdh_disable_request();
+    APP_ERROR_CHECK(err_code);
+}
+
 
 /**@brief Function for handling advertising events.
  *
@@ -620,19 +546,22 @@ static void conn_params_init(void)
  */
 static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 {
-	switch (ble_adv_evt)
-	{
-	case BLE_ADV_EVT_FAST:
-		NRF_LOG_INFO("Fast advertising.");
-		break;
+    uint32_t err_code;
 
-	case BLE_ADV_EVT_IDLE:
-		NRF_LOG_INFO("Advertising idle.");
-		break;
+    switch (ble_adv_evt)
+    {
+        case BLE_ADV_EVT_FAST:
+            err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
+            APP_ERROR_CHECK(err_code);
+            break;
 
-	default:
-		break;
-	}
+        case BLE_ADV_EVT_IDLE:
+            sleep_mode_enter();
+            break;
+
+        default:
+            break;
+    }
 }
 
 
@@ -643,92 +572,56 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
  */
 static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 {
-	ret_code_t err_code;
+    uint32_t err_code = NRF_SUCCESS;
 
-	switch (p_ble_evt->header.evt_id)
-	{
-	case BLE_GAP_EVT_CONNECTED:
-		NRF_LOG_INFO("Connected.");
-		m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
-		break;
+    switch (p_ble_evt->header.evt_id)
+    {
+        case BLE_GAP_EVT_DISCONNECTED:
+            // LED indication will be changed when advertising starts.
+            break;
 
-	case BLE_GAP_EVT_DISCONNECTED:
-		NRF_LOG_INFO("Disconnected, reason %d.",
-			p_ble_evt->evt.gap_evt.params.disconnected.reason);
-		m_conn_handle = BLE_CONN_HANDLE_INVALID;
-		break;
+        case BLE_GAP_EVT_CONNECTED:
+            err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
+            APP_ERROR_CHECK(err_code);
+            m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+            err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
+            APP_ERROR_CHECK(err_code);
+            break;
 
-#ifndef S140
-	case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
-	{
-		NRF_LOG_DEBUG("PHY update request.");
-		ble_gap_phys_t const phys =
-		{
-			.rx_phys = BLE_GAP_PHY_AUTO,
-			.tx_phys = BLE_GAP_PHY_AUTO,
-		};
-		err_code = sd_ble_gap_phy_update(p_ble_evt->evt.gap_evt.conn_handle, &phys);
-		APP_ERROR_CHECK(err_code);
-	} break;
-#endif
+        case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
+        {
+            NRF_LOG_DEBUG("PHY update request.");
+            ble_gap_phys_t const phys =
+            {
+                .rx_phys = BLE_GAP_PHY_AUTO,
+                .tx_phys = BLE_GAP_PHY_AUTO,
+            };
+            err_code = sd_ble_gap_phy_update(p_ble_evt->evt.gap_evt.conn_handle, &phys);
+            APP_ERROR_CHECK(err_code);
+            break;
+        }
 
-	case BLE_GATTC_EVT_TIMEOUT:
-		// Disconnect on GATT Client timeout event.
-		NRF_LOG_DEBUG("GATT Client Timeout.");
-		err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gattc_evt.conn_handle,
-			BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
-		APP_ERROR_CHECK(err_code);
-		break;
+        case BLE_GATTC_EVT_TIMEOUT:
+            // Disconnect on GATT Client timeout event.
+            NRF_LOG_DEBUG("GATT Client Timeout.");
+            err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gattc_evt.conn_handle,
+                                             BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+            APP_ERROR_CHECK(err_code);
+            break;
 
-	case BLE_GATTS_EVT_TIMEOUT:
-		// Disconnect on GATT Server timeout event.
-		NRF_LOG_DEBUG("GATT Server Timeout.");
-		err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gatts_evt.conn_handle,
-			BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
-		APP_ERROR_CHECK(err_code);
-		break;
+        case BLE_GATTS_EVT_TIMEOUT:
+            // Disconnect on GATT Server timeout event.
+            NRF_LOG_DEBUG("GATT Server Timeout.");
+            err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gatts_evt.conn_handle,
+                                             BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+            APP_ERROR_CHECK(err_code);
+            break;
 
-	case BLE_EVT_USER_MEM_REQUEST:
-		err_code = sd_ble_user_mem_reply(m_conn_handle, NULL);
-		APP_ERROR_CHECK(err_code);
-		break;
-
-	case BLE_GATTS_EVT_RW_AUTHORIZE_REQUEST:
-	{
-		ble_gatts_evt_rw_authorize_request_t  req;
-		ble_gatts_rw_authorize_reply_params_t auth_reply;
-
-		req = p_ble_evt->evt.gatts_evt.params.authorize_request;
-
-		if (req.type != BLE_GATTS_AUTHORIZE_TYPE_INVALID)
-		{
-			if ((req.request.write.op == BLE_GATTS_OP_PREP_WRITE_REQ) ||
-				(req.request.write.op == BLE_GATTS_OP_EXEC_WRITE_REQ_NOW) ||
-				(req.request.write.op == BLE_GATTS_OP_EXEC_WRITE_REQ_CANCEL))
-			{
-				if (req.type == BLE_GATTS_AUTHORIZE_TYPE_WRITE)
-				{
-					auth_reply.type = BLE_GATTS_AUTHORIZE_TYPE_WRITE;
-				}
-				else
-				{
-					auth_reply.type = BLE_GATTS_AUTHORIZE_TYPE_READ;
-				}
-				auth_reply.params.write.gatt_status = APP_FEATURE_NOT_SUPPORTED;
-				err_code = sd_ble_gatts_rw_authorize_reply(p_ble_evt->evt.gatts_evt.conn_handle,
-					&auth_reply);
-				APP_ERROR_CHECK(err_code);
-			}
-		}
-	} break;
-
-
-	default:
-		// No implementation needed.
-		break;
-	}
+        default:
+            // No implementation needed.
+            break;
+    }
 }
-
 
 
 /**@brief Function for initializing the BLE stack.
@@ -737,121 +630,213 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
  */
 static void ble_stack_init(void)
 {
-	ret_code_t err_code;
+    ret_code_t err_code;
 
-	err_code = nrf_sdh_enable_request();
-	APP_ERROR_CHECK(err_code);
+    err_code = nrf_sdh_enable_request();
+    APP_ERROR_CHECK(err_code);
 
-	// Configure the BLE stack using the default settings.
-	// Fetch the start address of the application RAM.
-	uint32_t ram_start = 0;
-	err_code = nrf_sdh_ble_default_cfg_set(APP_BLE_CONN_CFG_TAG, &ram_start);
-	APP_ERROR_CHECK(err_code);
+    // Configure the BLE stack using the default settings.
+    // Fetch the start address of the application RAM.
+    uint32_t ram_start = 0;
+    err_code = nrf_sdh_ble_default_cfg_set(APP_BLE_CONN_CFG_TAG, &ram_start);
+    APP_ERROR_CHECK(err_code);
 
-	// Enable BLE stack.
-	err_code = nrf_sdh_ble_enable(&ram_start);
-	APP_ERROR_CHECK(err_code);
+    // Enable BLE stack.
+    err_code = nrf_sdh_ble_enable(&ram_start);
+    APP_ERROR_CHECK(err_code);
 
-	// Register a handler for BLE events.
-	NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);
+    NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);
 }
+
 
 /**@brief Function for the Peer Manager initialization.
  */
-static void peer_manager_init(void)
+static void peer_manager_init()
 {
-	ble_gap_sec_params_t sec_param;
-	ret_code_t           err_code;
+    ble_gap_sec_params_t sec_param;
+    ret_code_t           err_code;
 
-	err_code = pm_init();
-	APP_ERROR_CHECK(err_code);
+    err_code = pm_init();
+    APP_ERROR_CHECK(err_code);
 
-	memset(&sec_param, 0, sizeof(ble_gap_sec_params_t));
+    memset(&sec_param, 0, sizeof(ble_gap_sec_params_t));
 
-	// Security parameters to be used for all security procedures.
-	sec_param.bond = SEC_PARAM_BOND;
-	sec_param.mitm = SEC_PARAM_MITM;
-	sec_param.io_caps = SEC_PARAM_IO_CAPABILITIES;
-	sec_param.oob = SEC_PARAM_OOB;
-	sec_param.min_key_size = SEC_PARAM_MIN_KEY_SIZE;
-	sec_param.max_key_size = SEC_PARAM_MAX_KEY_SIZE;
-	sec_param.kdist_own.enc = 1;
-	sec_param.kdist_own.id = 1;
-	sec_param.kdist_peer.enc = 1;
-	sec_param.kdist_peer.id = 1;
+    // Security parameters to be used for all security procedures.
+    sec_param.bond           = SEC_PARAM_BOND;
+    sec_param.mitm           = SEC_PARAM_MITM;
+    sec_param.lesc           = SEC_PARAM_LESC;
+    sec_param.keypress       = SEC_PARAM_KEYPRESS;
+    sec_param.io_caps        = SEC_PARAM_IO_CAPABILITIES;
+    sec_param.oob            = SEC_PARAM_OOB;
+    sec_param.min_key_size   = SEC_PARAM_MIN_KEY_SIZE;
+    sec_param.max_key_size   = SEC_PARAM_MAX_KEY_SIZE;
+    sec_param.kdist_own.enc  = 1;
+    sec_param.kdist_own.id   = 1;
+    sec_param.kdist_peer.enc = 1;
+    sec_param.kdist_peer.id  = 1;
 
-	err_code = pm_sec_params_set(&sec_param);
-	APP_ERROR_CHECK(err_code);
+    err_code = pm_sec_params_set(&sec_param);
+    APP_ERROR_CHECK(err_code);
 
-	err_code = pm_register(pm_evt_handler);
-	APP_ERROR_CHECK(err_code);
-
-	err_code = fds_register(fds_evt_handler);
-	APP_ERROR_CHECK(err_code);
+    err_code = pm_register(pm_evt_handler);
+    APP_ERROR_CHECK(err_code);
 }
+
+
+/** @brief Clear bonding information from persistent storage.
+ */
+static void delete_bonds(void)
+{
+    ret_code_t err_code;
+
+    NRF_LOG_INFO("Erase bonds!");
+
+    err_code = pm_peers_delete();
+    APP_ERROR_CHECK(err_code);
+}
+
+
+/**@brief Function for handling events from the BSP module.
+ *
+ * @param[in]   event   Event generated when button is pressed.
+ */
+static void bsp_event_handler(bsp_event_t event)
+{
+    uint32_t err_code;
+
+    switch (event)
+    {
+        case BSP_EVENT_SLEEP:
+            sleep_mode_enter();
+            break; // BSP_EVENT_SLEEP
+
+        case BSP_EVENT_DISCONNECT:
+            err_code = sd_ble_gap_disconnect(m_conn_handle,
+                                             BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+            if (err_code != NRF_ERROR_INVALID_STATE)
+            {
+                APP_ERROR_CHECK(err_code);
+            }
+            break; // BSP_EVENT_DISCONNECT
+
+        case BSP_EVENT_WHITELIST_OFF:
+            if (m_conn_handle == BLE_CONN_HANDLE_INVALID)
+            {
+                err_code = ble_advertising_restart_without_whitelist(&m_advertising);
+                if (err_code != NRF_ERROR_INVALID_STATE)
+                {
+                    APP_ERROR_CHECK(err_code);
+                }
+            }
+            break; // BSP_EVENT_KEY_0
+
+        default:
+            break;
+    }
+}
+
 
 /**@brief Function for initializing the Advertising functionality.
  */
 static void advertising_init(void)
 {
-	ret_code_t             err_code;
-	ble_advertising_init_t init;
+    uint32_t               err_code;
+    ble_advertising_init_t init;
 
-	memset(&init, 0, sizeof(init));
+    memset(&init, 0, sizeof(init));
 
-	init.config.ble_adv_fast_enabled = true;
-	init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;
-	init.config.ble_adv_fast_timeout = APP_ADV_TIMEOUT_IN_SECONDS;
-	init.config.ble_adv_slow_enabled = true;
-	init.config.ble_adv_slow_interval = 12800; // 8 Sekunden
-	init.config.ble_adv_slow_timeout = 0;
+    init.advdata.name_type               = BLE_ADVDATA_FULL_NAME;
+    init.advdata.include_appearance      = true;
+    init.advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
+    init.advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
+    init.advdata.uuids_complete.p_uuids  = m_adv_uuids;
 
-	init.evt_handler = on_adv_evt;
+    advertising_config_get(&init.config);
 
-	create_adv_data(&init.advdata);
+    init.evt_handler = on_adv_evt;
 
-	err_code = ble_advertising_init(&m_advertising, &init);
+    err_code = ble_advertising_init(&m_advertising, &init);
+    APP_ERROR_CHECK(err_code);
 
-	APP_ERROR_CHECK(err_code);
-
-	ble_advertising_conn_cfg_tag_set(&m_advertising, APP_BLE_CONN_CFG_TAG);
+    ble_advertising_conn_cfg_tag_set(&m_advertising, APP_BLE_CONN_CFG_TAG);
 }
 
 
-/**@brief Function for initializing the nrf log module.
+/**@brief Function for initializing buttons and leds.
+ *
+ * @param[out] p_erase_bonds  Will be true if the clear bonding button was pressed to wake the application up.
+ */
+static void buttons_leds_init(bool * p_erase_bonds)
+{
+    uint32_t err_code;
+    bsp_event_t startup_event;
+
+    err_code = bsp_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS, bsp_event_handler);
+    APP_ERROR_CHECK(err_code);
+
+    err_code = bsp_btn_ble_init(NULL, &startup_event);
+    APP_ERROR_CHECK(err_code);
+
+    *p_erase_bonds = (startup_event == BSP_EVENT_CLEAR_BONDING_DATA);
+}
+
+
+/**@brief Function for the Power manager.
  */
 static void log_init(void)
 {
-	ret_code_t err_code = NRF_LOG_INIT(NULL);
-	APP_ERROR_CHECK(err_code);
+    uint32_t err_code = NRF_LOG_INIT(NULL);
+    APP_ERROR_CHECK(err_code);
 
-	NRF_LOG_DEFAULT_BACKENDS_INIT();
+    NRF_LOG_DEFAULT_BACKENDS_INIT();
 }
 
 
-static void battery_management_callback(battery_state_t *battery_state) {
-	ret_code_t err_code;
-	uint8_t  battery_level;
+/**@brief   Function for initializing the GATT module.
+ * @details The GATT module handles ATT_MTU and Data Length update procedures automatically.
+ */
+static void gatt_init(void)
+{
+    ret_code_t err_code = nrf_ble_gatt_init(&m_gatt, NULL);
+    APP_ERROR_CHECK(err_code);
+}
 
-	battery_level = (uint8_t)(100 * ((float)(battery_state->value) / (float)1023));
-	err_code = ble_bas_battery_level_update(&m_bas, battery_level);
-	if ((err_code != NRF_SUCCESS) &&
-		(err_code != NRF_ERROR_INVALID_STATE) &&
-		(err_code != NRF_ERROR_RESOURCES) &&
-		(err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING)
-		)
-	{
-		APP_ERROR_HANDLER(err_code);
-	}
-	if (battery_state->battery_low_warning) {
-		power_off();
-	}
+
+/**@brief Function for starting advertising.
+ */
+static void advertising_start(bool erase_bonds)
+{
+    if (erase_bonds == true)
+    {
+        delete_bonds();
+        // Advertising is started by PM_EVT_PEERS_DELETE_SUCCEEDED event.
+    }
+    else
+    {
+        uint32_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
+        APP_ERROR_CHECK(err_code);
+
+        NRF_LOG_DEBUG("advertising is started");
+    }
 }
 
 static void power_management_init(void)
 {
-	uint32_t err_code = nrf_pwr_mgmt_init();
-	APP_ERROR_CHECK(err_code);
+    uint32_t err_code = nrf_pwr_mgmt_init();
+    APP_ERROR_CHECK(err_code);
+}
+
+
+/**@brief Function for handling the idle state (main loop).
+ *
+ * @details If there is no pending log operation, then sleep until next the next event occurs.
+ */
+static void idle_state_handle(void)
+{
+    if (NRF_LOG_PROCESS() == false)
+    {
+        nrf_pwr_mgmt_run();
+    }
 }
 
 
@@ -859,39 +844,39 @@ static void power_management_init(void)
  */
 int main(void)
 {
-	log_init();
-	timers_init();
-	power_management_init();
-	ble_stack_init();
-	gap_params_init();
-	gatt_init();
-	services_init();
-	advertising_init();
-	conn_params_init();
-	peer_manager_init();
+    bool       erase_bonds;
+    ret_code_t err_code;
 
-	memset(&time_state.cts_date, 0, sizeof(cts_date_t));
-	time_state.time_known = false;
+    log_init();
 
-	NRF_LOG_INFO("Digit app started.");
-	display_init();
-	application_timers_start();
+    // Initialize the async SVCI interface to bootloader before any interrupts are enabled.
+    err_code = ble_dfu_buttonless_async_svci_init();
+    APP_ERROR_CHECK(err_code);
 
-	advertising_start(false);
+    timers_init();
+    power_management_init();
+    buttons_leds_init(&erase_bonds);
+    ble_stack_init();
+    peer_manager_init();
+    gap_params_init();
+    gatt_init();
+    advertising_init();
+    services_init();
+    conn_params_init();
 
-	battery_management_init(battery_management_callback);
-	battery_management_trigger();
-	sd_power_dcdc_mode_set(NRF_POWER_DCDC_ENABLE);
+    NRF_LOG_INFO("Buttonless DFU Application started.");
 
-	//power_off();
+    // Start execution.
+    application_timers_start();
+    advertising_start(erase_bonds);
 
-	for (;;)
-	{
-		if (NRF_LOG_PROCESS() == false)
-		{
-			nrf_pwr_mgmt_run();
-		}
-	}
+    // Enter main loop.
+    for (;;)
+    {
+        idle_state_handle();
+    }
 }
 
-
+/**
+ * @}
+ */

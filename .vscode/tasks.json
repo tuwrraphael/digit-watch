@@ -1,0 +1,28 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "package",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "package",
+                "-C",
+                "${workspaceRoot}/pca10040/s132/armgcc"
+            ]
+        },
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "-C",
+                "${workspaceRoot}/pca10040/s132/armgcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
