@@ -38,6 +38,7 @@
 #include "nrf_bootloader_info.h"
 
 #include "./device_information.h"
+#include "./display.h"
 
 #define APP_ADV_INTERVAL 300   /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_DURATION 18000 /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
@@ -283,7 +284,6 @@ static void conn_params_init(void)
 
 static void application_timers_start(void)
 {
-
 }
 
 static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
@@ -468,8 +468,6 @@ int main(void)
     ret_code_t err_code;
 
     log_init();
-
-    // Initialize the async SVCI interface to bootloader before any interrupts are enabled.
     err_code = ble_dfu_buttonless_async_svci_init();
     APP_ERROR_CHECK(err_code);
 
@@ -485,11 +483,14 @@ int main(void)
 
     NRF_LOG_INFO("Digit started.");
 
-    // Start execution.
     application_timers_start();
     advertising_start();
 
-    // Enter main loop.
+    display_init();
+    draw_time_indicator(3, 10, 1);
+    transfer_buffer_to_display();
+    switch_display_mode();
+
     for (;;)
     {
         idle_state_handle();

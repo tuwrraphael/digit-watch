@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "nrfx_rtc.h": "c",
+        "nrf_rtc.h": "c",
+        "nrfx.h": "c",
+        "nrfx_config.h": "c",
+        "nrfx_clock.h": "c"
+    }
+}

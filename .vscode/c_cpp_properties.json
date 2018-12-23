@@ -11,7 +11,9 @@
             "cppStandard": "c++17",
             "intelliSenseMode": "clang-x64",
             "defines": [
-                "__STATIC_INLINE"
+                "__STATIC_INLINE",
+                "NRF52",
+                "SOFTDEVICE_PRESENT"
             ]
         }
     ],

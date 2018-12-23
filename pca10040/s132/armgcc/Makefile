@@ -10,6 +10,13 @@ $(OUTPUT_DIRECTORY)/nrf52832_xxaa.out: \
 
 # Source files common to all targets
 SRC_FILES += \
+  $(PROJ_DIR)/main.c \
+  $(PROJ_DIR)/display.c \
+  $(PROJ_DIR)/display_extcomin.c \
+  $(SDK_ROOT)/components/libraries/gfx/nrf_gfx.c \
+  $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_spim.c \
+  $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_rtc.c \
+  $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_ppi.c \
   $(SDK_ROOT)/modules/nrfx/mdk/gcc_startup_nrf52.S \
   $(SDK_ROOT)/components/libraries/log/src/nrf_log_backend_rtt.c \
   $(SDK_ROOT)/components/libraries/log/src/nrf_log_backend_serial.c \
@@ -48,7 +55,6 @@ SRC_FILES += \
   $(SDK_ROOT)/modules/nrfx/drivers/src/prs/nrfx_prs.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_uart.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_uarte.c \
-  $(PROJ_DIR)/main.c \
   $(SDK_ROOT)/components/libraries/bootloader/dfu/nrf_dfu_svci.c \
   $(SDK_ROOT)/components/ble/peer_manager/auth_status_tracker.c \
   $(SDK_ROOT)/components/ble/common/ble_advdata.c \
@@ -124,6 +130,8 @@ INC_FOLDERS += \
   $(SDK_ROOT)/external/fprintf \
   $(SDK_ROOT)/components/libraries/svc \
   $(SDK_ROOT)/components/libraries/log/src \
+  $(SDK_ROOT)/components/libraries/gfx/ \
+  $(SDK_ROOT)/external/thedotfactory_fonts \
 
 # Libraries common to all targets
 LIB_FILES += \
@@ -239,6 +247,12 @@ SDK_CONFIG_FILE := ../config/sdk_config.h
 CMSIS_CONFIG_TOOL := $(SDK_ROOT)/external_tools/cmsisconfig/CMSIS_Configuration_Wizard.jar
 sdk_config:
 	java -jar $(CMSIS_CONFIG_TOOL) $(SDK_CONFIG_FILE)
+
+$(OUTPUT_DIRECTORY)/merged.hex: $(OUTPUT_DIRECTORY)/nrf52832_xxaa.hex
+	D:/environments/srecord-1.63-win32/srec_cat.exe $(SDK_ROOT)/components/softdevice/s132/hex/s132_nrf52_6.1.0_softdevice.hex -Intel $(OUTPUT_DIRECTORY)/nrf52832_xxaa.hex -Intel -o $(OUTPUT_DIRECTORY)/merged.hex -Intel
+
+flash_dap: $(OUTPUT_DIRECTORY)/merged.hex
+	xcopy $(OUTPUT_DIRECTORY)\merged.hex E:\
 
 $(OUTPUT_DIRECTORY)/app_dfu_pkg.zip: $(OUTPUT_DIRECTORY)/nrf52832_xxaa.hex
 	$(SDK_ROOT)/nrfutil.exe pkg generate --hw-version 52 --application-version 1 --application $(OUTPUT_DIRECTORY)/nrf52832_xxaa.hex --sd-req 0xAF --key-file $(SDK_ROOT)/private.key $(OUTPUT_DIRECTORY)/app_dfu_pkg.zip

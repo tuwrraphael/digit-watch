@@ -355,7 +355,7 @@
 #endif
 // <o> NRFX_GPIOTE_CONFIG_NUM_OF_LOW_POWER_EVENTS - Number of lower power input pins 
 #ifndef NRFX_GPIOTE_CONFIG_NUM_OF_LOW_POWER_EVENTS
-#define NRFX_GPIOTE_CONFIG_NUM_OF_LOW_POWER_EVENTS 1
+#define NRFX_GPIOTE_CONFIG_NUM_OF_LOW_POWER_EVENTS 4
 #endif
 
 // <o> NRFX_GPIOTE_CONFIG_IRQ_PRIORITY  - Interrupt priority
@@ -425,6 +425,65 @@
 // </e>
 
 // </e>
+
+// <e> NRFX_PPI_ENABLED - nrfx_ppi - PPI peripheral allocator
+//==========================================================
+#ifndef NRFX_PPI_ENABLED
+#define NRFX_PPI_ENABLED 1
+#endif
+// <e> NRFX_PPI_CONFIG_LOG_ENABLED - Enables logging in the module.
+//==========================================================
+#ifndef NRFX_PPI_CONFIG_LOG_ENABLED
+#define NRFX_PPI_CONFIG_LOG_ENABLED 0
+#endif
+// <o> NRFX_PPI_CONFIG_LOG_LEVEL  - Default Severity level
+ 
+// <0=> Off 
+// <1=> Error 
+// <2=> Warning 
+// <3=> Info 
+// <4=> Debug 
+
+#ifndef NRFX_PPI_CONFIG_LOG_LEVEL
+#define NRFX_PPI_CONFIG_LOG_LEVEL 3
+#endif
+
+// <o> NRFX_PPI_CONFIG_INFO_COLOR  - ANSI escape code prefix.
+ 
+// <0=> Default 
+// <1=> Black 
+// <2=> Red 
+// <3=> Green 
+// <4=> Yellow 
+// <5=> Blue 
+// <6=> Magenta 
+// <7=> Cyan 
+// <8=> White 
+
+#ifndef NRFX_PPI_CONFIG_INFO_COLOR
+#define NRFX_PPI_CONFIG_INFO_COLOR 0
+#endif
+
+// <o> NRFX_PPI_CONFIG_DEBUG_COLOR  - ANSI escape code prefix.
+ 
+// <0=> Default 
+// <1=> Black 
+// <2=> Red 
+// <3=> Green 
+// <4=> Yellow 
+// <5=> Blue 
+// <6=> Magenta 
+// <7=> Cyan 
+// <8=> White 
+
+#ifndef NRFX_PPI_CONFIG_DEBUG_COLOR
+#define NRFX_PPI_CONFIG_DEBUG_COLOR 0
+#endif
+
+// </e>
+
+// </e>
+
 
 // <e> NRFX_PRS_ENABLED - nrfx_prs - Peripheral Resource Sharing module
 //==========================================================
@@ -513,6 +572,238 @@
 
 #ifndef NRFX_PRS_CONFIG_DEBUG_COLOR
 #define NRFX_PRS_CONFIG_DEBUG_COLOR 0
+#endif
+
+// </e>
+
+// </e>
+
+// <e> NRFX_RTC_ENABLED - nrfx_rtc - RTC peripheral driver
+//==========================================================
+#ifndef NRFX_RTC_ENABLED
+#define NRFX_RTC_ENABLED 1
+#endif
+// <q> NRFX_RTC0_ENABLED  - Enable RTC0 instance
+ 
+
+#ifndef NRFX_RTC0_ENABLED
+#define NRFX_RTC0_ENABLED 0
+#endif
+
+// <q> NRFX_RTC1_ENABLED  - Enable RTC1 instance
+ 
+
+#ifndef NRFX_RTC1_ENABLED
+#define NRFX_RTC1_ENABLED 0
+#endif
+
+// <q> NRFX_RTC2_ENABLED  - Enable RTC2 instance
+ 
+
+#ifndef NRFX_RTC2_ENABLED
+#define NRFX_RTC2_ENABLED 1
+#endif
+
+// <o> NRFX_RTC_MAXIMUM_LATENCY_US - Maximum possible time[us] in highest priority interrupt 
+#ifndef NRFX_RTC_MAXIMUM_LATENCY_US
+#define NRFX_RTC_MAXIMUM_LATENCY_US 2000
+#endif
+
+// <o> NRFX_RTC_DEFAULT_CONFIG_FREQUENCY - Frequency  <16-32768> 
+
+
+#ifndef NRFX_RTC_DEFAULT_CONFIG_FREQUENCY
+#define NRFX_RTC_DEFAULT_CONFIG_FREQUENCY 32768
+#endif
+
+// <q> NRFX_RTC_DEFAULT_CONFIG_RELIABLE  - Ensures safe compare event triggering
+ 
+
+#ifndef NRFX_RTC_DEFAULT_CONFIG_RELIABLE
+#define NRFX_RTC_DEFAULT_CONFIG_RELIABLE 0
+#endif
+
+// <o> NRFX_RTC_DEFAULT_CONFIG_IRQ_PRIORITY  - Interrupt priority
+ 
+// <0=> 0 (highest) 
+// <1=> 1 
+// <2=> 2 
+// <3=> 3 
+// <4=> 4 
+// <5=> 5 
+// <6=> 6 
+// <7=> 7 
+
+#ifndef NRFX_RTC_DEFAULT_CONFIG_IRQ_PRIORITY
+#define NRFX_RTC_DEFAULT_CONFIG_IRQ_PRIORITY 6
+#endif
+
+// <e> NRFX_RTC_CONFIG_LOG_ENABLED - Enables logging in the module.
+//==========================================================
+#ifndef NRFX_RTC_CONFIG_LOG_ENABLED
+#define NRFX_RTC_CONFIG_LOG_ENABLED 0
+#endif
+// <o> NRFX_RTC_CONFIG_LOG_LEVEL  - Default Severity level
+ 
+// <0=> Off 
+// <1=> Error 
+// <2=> Warning 
+// <3=> Info 
+// <4=> Debug 
+
+#ifndef NRFX_RTC_CONFIG_LOG_LEVEL
+#define NRFX_RTC_CONFIG_LOG_LEVEL 3
+#endif
+
+// <o> NRFX_RTC_CONFIG_INFO_COLOR  - ANSI escape code prefix.
+ 
+// <0=> Default 
+// <1=> Black 
+// <2=> Red 
+// <3=> Green 
+// <4=> Yellow 
+// <5=> Blue 
+// <6=> Magenta 
+// <7=> Cyan 
+// <8=> White 
+
+#ifndef NRFX_RTC_CONFIG_INFO_COLOR
+#define NRFX_RTC_CONFIG_INFO_COLOR 0
+#endif
+
+// <o> NRFX_RTC_CONFIG_DEBUG_COLOR  - ANSI escape code prefix.
+ 
+// <0=> Default 
+// <1=> Black 
+// <2=> Red 
+// <3=> Green 
+// <4=> Yellow 
+// <5=> Blue 
+// <6=> Magenta 
+// <7=> Cyan 
+// <8=> White 
+
+#ifndef NRFX_RTC_CONFIG_DEBUG_COLOR
+#define NRFX_RTC_CONFIG_DEBUG_COLOR 0
+#endif
+
+// </e>
+
+// </e>
+
+
+// <e> NRFX_SPIM_ENABLED - nrfx_spim - SPIM peripheral driver
+//==========================================================
+#ifndef NRFX_SPIM_ENABLED
+#define NRFX_SPIM_ENABLED 1
+#endif
+// <q> NRFX_SPIM0_ENABLED  - Enable SPIM0 instance
+ 
+
+#ifndef NRFX_SPIM0_ENABLED
+#define NRFX_SPIM0_ENABLED 0
+#endif
+
+// <q> NRFX_SPIM1_ENABLED  - Enable SPIM1 instance
+ 
+
+#ifndef NRFX_SPIM1_ENABLED
+#define NRFX_SPIM1_ENABLED 1
+#endif
+
+// <q> NRFX_SPIM2_ENABLED  - Enable SPIM2 instance
+ 
+
+#ifndef NRFX_SPIM2_ENABLED
+#define NRFX_SPIM2_ENABLED 0
+#endif
+
+// <q> NRFX_SPIM3_ENABLED  - Enable SPIM3 instance
+ 
+
+#ifndef NRFX_SPIM3_ENABLED
+#define NRFX_SPIM3_ENABLED 0
+#endif
+
+// <q> NRFX_SPIM_EXTENDED_ENABLED  - Enable extended SPIM features
+ 
+
+#ifndef NRFX_SPIM_EXTENDED_ENABLED
+#define NRFX_SPIM_EXTENDED_ENABLED 0
+#endif
+
+// <o> NRFX_SPIM_MISO_PULL_CFG  - MISO pin pull configuration.
+ 
+// <0=> NRF_GPIO_PIN_NOPULL 
+// <1=> NRF_GPIO_PIN_PULLDOWN 
+// <3=> NRF_GPIO_PIN_PULLUP 
+
+#ifndef NRFX_SPIM_MISO_PULL_CFG
+#define NRFX_SPIM_MISO_PULL_CFG 1
+#endif
+
+// <o> NRFX_SPIM_DEFAULT_CONFIG_IRQ_PRIORITY  - Interrupt priority
+ 
+// <0=> 0 (highest) 
+// <1=> 1 
+// <2=> 2 
+// <3=> 3 
+// <4=> 4 
+// <5=> 5 
+// <6=> 6 
+// <7=> 7 
+
+#ifndef NRFX_SPIM_DEFAULT_CONFIG_IRQ_PRIORITY
+#define NRFX_SPIM_DEFAULT_CONFIG_IRQ_PRIORITY 6
+#endif
+
+// <e> NRFX_SPIM_CONFIG_LOG_ENABLED - Enables logging in the module.
+//==========================================================
+#ifndef NRFX_SPIM_CONFIG_LOG_ENABLED
+#define NRFX_SPIM_CONFIG_LOG_ENABLED 0
+#endif
+// <o> NRFX_SPIM_CONFIG_LOG_LEVEL  - Default Severity level
+ 
+// <0=> Off 
+// <1=> Error 
+// <2=> Warning 
+// <3=> Info 
+// <4=> Debug 
+
+#ifndef NRFX_SPIM_CONFIG_LOG_LEVEL
+#define NRFX_SPIM_CONFIG_LOG_LEVEL 3
+#endif
+
+// <o> NRFX_SPIM_CONFIG_INFO_COLOR  - ANSI escape code prefix.
+ 
+// <0=> Default 
+// <1=> Black 
+// <2=> Red 
+// <3=> Green 
+// <4=> Yellow 
+// <5=> Blue 
+// <6=> Magenta 
+// <7=> Cyan 
+// <8=> White 
+
+#ifndef NRFX_SPIM_CONFIG_INFO_COLOR
+#define NRFX_SPIM_CONFIG_INFO_COLOR 0
+#endif
+
+// <o> NRFX_SPIM_CONFIG_DEBUG_COLOR  - ANSI escape code prefix.
+ 
+// <0=> Default 
+// <1=> Black 
+// <2=> Red 
+// <3=> Green 
+// <4=> Yellow 
+// <5=> Blue 
+// <6=> Magenta 
+// <7=> Cyan 
+// <8=> White 
+
+#ifndef NRFX_SPIM_CONFIG_DEBUG_COLOR
+#define NRFX_SPIM_CONFIG_DEBUG_COLOR 0
 #endif
 
 // </e>
@@ -1190,6 +1481,11 @@
 #define NRF_FPRINTF_ENABLED 1
 #endif
 
+// <q> NRF_GFX_ENABLED  - nrf_gfx - GFX module
+#ifndef NRF_GFX_ENABLED
+#define NRF_GFX_ENABLED 1
+#endif
+
 // <e> NRF_FSTORAGE_ENABLED - nrf_fstorage - Flash abstraction library
 //==========================================================
 #ifndef NRF_FSTORAGE_ENABLED
@@ -1382,7 +1678,7 @@
  
 
 #ifndef BUTTON_ENABLED
-#define BUTTON_ENABLED 1
+#define BUTTON_ENABLED 0
 #endif
 
 // <q> BUTTON_HIGH_ACCURACY_ENABLED  - Enables GPIOTE high accuracy for buttons
