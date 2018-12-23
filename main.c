@@ -1,52 +1,3 @@
-/**
- * Copyright (c) 2014 - 2018, Nordic Semiconductor ASA
- *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form, except as embedded into a Nordic
- *    Semiconductor ASA integrated circuit in a product or a software update for
- *    such product, must reproduce the above copyright notice, this list of
- *    conditions and the following disclaimer in the documentation and/or other
- *    materials provided with the distribution.
- *
- * 3. Neither the name of Nordic Semiconductor ASA nor the names of its
- *    contributors may be used to endorse or promote products derived from this
- *    software without specific prior written permission.
- *
- * 4. This software, with or without modification, must only be used with a
- *    Nordic Semiconductor ASA integrated circuit.
- *
- * 5. Any software provided in binary form under this license must not be reverse
- *    engineered, decompiled, modified and/or disassembled.
- *
- * THIS SOFTWARE IS PROVIDED BY NORDIC SEMICONDUCTOR ASA "AS IS" AND ANY EXPRESS
- * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL NORDIC SEMICONDUCTOR ASA OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
-/** @example examples/ble_peripheral/ble_app_buttonless_dfu
- *
- * @brief Secure DFU Buttonless Service Application main file.
- *
- * This file contains the source code for a sample application using the proprietary
- * Secure DFU Buttonless Service. This is a template application that can be modified
- * to your needs. To extend the functionality of this application, please find
- * locations where the comment "// YOUR_JOB:" is present and read the comments.
- */
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -70,7 +21,6 @@
 #include "app_timer.h"
 #include "peer_manager.h"
 #include "peer_manager_handler.h"
-#include "bsp_btn_ble.h"
 #include "ble_hci.h"
 #include "ble_advdata.h"
 #include "ble_advertising.h"
@@ -115,70 +65,30 @@
 
 #define DEAD_BEEF 0xDEADBEEF /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
-NRF_BLE_GATT_DEF(m_gatt);           /**< GATT module instance. */
-NRF_BLE_QWR_DEF(m_qwr);             /**< Context for the Queued Write module.*/
-BLE_ADVERTISING_DEF(m_advertising); /**< Advertising module instance. */
+NRF_BLE_GATT_DEF(m_gatt);
+NRF_BLE_QWR_DEF(m_qwr);
+BLE_ADVERTISING_DEF(m_advertising);
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID; /**< Handle of the current connection. */
-static void advertising_start();         /**< Forward declaration of advertising start function */
+static void advertising_start();
 
-// YOUR_JOB: Use UUIDs for service(s) used in your application.
 static ble_uuid_t m_adv_uuids[] = {{BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE}};
 
-/**@brief Handler for shutdown preparation.
- *
- * @details During shutdown procedures, this function will be called at a 1 second interval
- *          untill the function returns true. When the function returns true, it means that the
- *          app is ready to reset to DFU mode.
- *
- * @param[in]   event   Power manager event.
- *
- * @retval  True if shutdown is allowed by this power manager handler, otherwise false.
- */
 static bool app_shutdown_handler(nrf_pwr_mgmt_evt_t event)
 {
     switch (event)
     {
     case NRF_PWR_MGMT_EVT_PREPARE_DFU:
         NRF_LOG_INFO("Power management wants to reset to DFU mode.");
-        // YOUR_JOB: Get ready to reset into DFU mode
-        //
-        // If you aren't finished with any ongoing tasks, return "false" to
-        // signal to the system that reset is impossible at this stage.
-        //
-        // Here is an example using a variable to delay resetting the device.
-        //
-        // if (!m_ready_for_reset)
-        // {
-        //      return false;
-        // }
-        // else
-        //{
-        //
-        //    // Device ready to enter
-        //    uint32_t err_code;
-        //    err_code = sd_softdevice_disable();
-        //    APP_ERROR_CHECK(err_code);
-        //    err_code = app_timer_stop_all();
-        //    APP_ERROR_CHECK(err_code);
-        //}
         break;
 
     default:
-        // YOUR_JOB: Implement any of the other events available from the power management module:
-        //      -NRF_PWR_MGMT_EVT_PREPARE_SYSOFF
-        //      -NRF_PWR_MGMT_EVT_PREPARE_WAKEUP
-        //      -NRF_PWR_MGMT_EVT_PREPARE_RESET
+
         return true;
     }
-
     NRF_LOG_INFO("Power management allowed to reset to DFU mode.");
     return true;
 }
-
-//lint -esym(528, m_app_shutdown_handler)
-/**@brief Register application shutdown handler with priority 0.
- */
 NRF_PWR_MGMT_HANDLER_REGISTER(app_shutdown_handler, 0);
 
 static void buttonless_dfu_sdh_state_observer(nrf_sdh_state_evt_t state, void *p_context)
@@ -192,8 +102,6 @@ static void buttonless_dfu_sdh_state_observer(nrf_sdh_state_evt_t state, void *p
         nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_GOTO_SYSOFF);
     }
 }
-
-/* nrf_sdh state observer. */
 NRF_SDH_STATE_OBSERVER(m_buttonless_dfu_state_obs, 0) =
     {
         .handler = buttonless_dfu_sdh_state_observer,
@@ -223,11 +131,6 @@ static void disconnect(uint16_t conn_handle, void *p_context)
     }
 }
 
-// YOUR_JOB: Update this code if you want to do anything given a DFU event (optional).
-/**@brief Function for handling dfu events from the Buttonless Secure DFU service
- *
- * @param[in]   event   Event from the Buttonless Secure DFU service.
- */
 static void ble_dfu_evt_handler(ble_dfu_buttonless_evt_type_t event)
 {
     switch (event)
@@ -275,59 +178,23 @@ static void ble_dfu_evt_handler(ble_dfu_buttonless_evt_type_t event)
     }
 }
 
-/**@brief Callback function for asserts in the SoftDevice.
- *
- * @details This function will be called in case of an assert in the SoftDevice.
- *
- * @warning This handler is an example only and does not fit a final product. You need to analyze
- *          how your product is supposed to react in case of Assert.
- * @warning On assert from the SoftDevice, the system can only recover on reset.
- *
- * @param[in] line_num   Line number of the failing ASSERT call.
- * @param[in] file_name  File name of the failing ASSERT call.
- */
 void assert_nrf_callback(uint16_t line_num, const uint8_t *p_file_name)
 {
     app_error_handler(DEAD_BEEF, line_num, p_file_name);
 }
 
-/**@brief Function for handling Peer Manager events.
- *
- * @param[in] p_evt  Peer Manager event.
- */
 static void pm_evt_handler(pm_evt_t const *p_evt)
 {
     pm_handler_on_pm_evt(p_evt);
     pm_handler_flash_clean(p_evt);
 }
 
-/**@brief Function for the Timer initialization.
- *
- * @details Initializes the timer module. This creates and starts application timers.
- */
 static void timers_init(void)
 {
-
-    // Initialize timer module.
     uint32_t err_code = app_timer_init();
     APP_ERROR_CHECK(err_code);
-
-    // Create timers.
-
-    /* YOUR_JOB: Create any timers to be used by the application.
-                 Below is an example of how to create a timer.
-                 For every new timer needed, increase the value of the macro APP_TIMER_MAX_TIMERS by
-                 one.
-       uint32_t err_code;
-       err_code = app_timer_create(&m_app_timer_id, APP_TIMER_MODE_REPEATED, timer_timeout_handler);
-       APP_ERROR_CHECK(err_code); */
 }
 
-/**@brief Function for the GAP initialization.
- *
- * @details This function sets up all the necessary GAP (Generic Access Profile) parameters of the
- *          device including the device name, appearance, and the preferred connection parameters.
- */
 static void gap_params_init(void)
 {
     uint32_t err_code;
@@ -355,45 +222,11 @@ static void gap_params_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-/**@brief Function for handling Queued Write Module errors.
- *
- * @details A pointer to this function will be passed to each service which may need to inform the
- *          application about an error.
- *
- * @param[in]   nrf_error   Error code containing information about what went wrong.
- */
 static void nrf_qwr_error_handler(uint32_t nrf_error)
 {
     APP_ERROR_HANDLER(nrf_error);
 }
 
-/**@brief Function for handling the YYY Service events.
- * YOUR_JOB implement a service handler function depending on the event the service you are using can generate
- *
- * @details This function will be called for all YY Service events which are passed to
- *          the application.
- *
- * @param[in]   p_yy_service   YY Service structure.
- * @param[in]   p_evt          Event received from the YY Service.
- *
- *
-   static void on_yys_evt(ble_yy_service_t     * p_yy_service,
-                          ble_yy_service_evt_t * p_evt)
-   {
-    switch (p_evt->evt_type)
-    {
-        case BLE_YY_NAME_EVT_WRITE:
-            APPL_LOG("[APPL]: charact written with value %s. ", p_evt->params.char_xx.value.p_str);
-            break;
-
-        default:
-            // No implementation needed.
-            break;
-    }
-   }*/
-
-/**@brief Function for initializing services that will be used by the application.
- */
 static void services_init(void)
 {
     uint32_t err_code;
@@ -410,42 +243,8 @@ static void services_init(void)
 
     err_code = ble_dfu_buttonless_init(&dfus_init);
     APP_ERROR_CHECK(err_code);
-
-    /* YOUR_JOB: Add code to initialize the services used by the application.
-       uint32_t                           err_code;
-       ble_xxs_init_t                     xxs_init;
-       ble_yys_init_t                     yys_init;
-
-       // Initialize XXX Service.
-       memset(&xxs_init, 0, sizeof(xxs_init));
-
-       xxs_init.evt_handler                = NULL;
-       xxs_init.is_xxx_notify_supported    = true;
-       xxs_init.ble_xx_initial_value.level = 100;
-
-       err_code = ble_bas_init(&m_xxs, &xxs_init);
-       APP_ERROR_CHECK(err_code);
-
-       // Initialize YYY Service.
-       memset(&yys_init, 0, sizeof(yys_init));
-       yys_init.evt_handler                  = on_yys_evt;
-       yys_init.ble_yy_initial_value.counter = 0;
-
-       err_code = ble_yy_service_init(&yys_init, &yy_init);
-       APP_ERROR_CHECK(err_code);
-     */
 }
 
-/**@brief Function for handling the Connection Parameters Module.
- *
- * @details This function will be called for all events in the Connection Parameters Module which
- *          are passed to the application.
- *          @note All this function does is to disconnect. This could have been done by simply
- *                setting the disconnect_on_fail config parameter, but instead we use the event
- *                handler mechanism to demonstrate its use.
- *
- * @param[in] p_evt  Event received from the Connection Parameters Module.
- */
 static void on_conn_params_evt(ble_conn_params_evt_t *p_evt)
 {
     uint32_t err_code;
@@ -457,17 +256,11 @@ static void on_conn_params_evt(ble_conn_params_evt_t *p_evt)
     }
 }
 
-/**@brief Function for handling a Connection Parameters error.
- *
- * @param[in] nrf_error  Error code containing information about what went wrong.
- */
 static void conn_params_error_handler(uint32_t nrf_error)
 {
     APP_ERROR_HANDLER(nrf_error);
 }
 
-/**@brief Function for initializing the Connection Parameters module.
- */
 static void conn_params_init(void)
 {
     uint32_t err_code;
@@ -488,22 +281,11 @@ static void conn_params_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-/**@brief Function for starting timers.
- */
 static void application_timers_start(void)
 {
-    /* YOUR_JOB: Start your timers. below is an example of how to start a timer.
-       uint32_t err_code;
-       err_code = app_timer_start(m_app_timer_id, TIMER_INTERVAL, NULL);
-       APP_ERROR_CHECK(err_code); */
+
 }
 
-/**@brief Function for handling advertising events.
- *
- * @details This function will be called for advertising events which are passed to the application.
- *
- * @param[in] ble_adv_evt  Advertising event.
- */
 static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 {
     switch (ble_adv_evt)
@@ -519,11 +301,6 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
     }
 }
 
-/**@brief Function for handling BLE events.
- *
- * @param[in]   p_ble_evt   Bluetooth stack event.
- * @param[in]   p_context   Unused.
- */
 static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context)
 {
     uint32_t err_code = NRF_SUCCESS;
@@ -576,10 +353,6 @@ static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context)
     }
 }
 
-/**@brief Function for initializing the BLE stack.
- *
- * @details Initializes the SoftDevice and the BLE event interrupt.
- */
 static void ble_stack_init(void)
 {
     ret_code_t err_code;
@@ -600,8 +373,6 @@ static void ble_stack_init(void)
     NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);
 }
 
-/**@brief Function for the Peer Manager initialization.
- */
 static void peer_manager_init()
 {
     ble_gap_sec_params_t sec_param;
@@ -633,8 +404,6 @@ static void peer_manager_init()
     APP_ERROR_CHECK(err_code);
 }
 
-/**@brief Function for initializing the Advertising functionality.
- */
 static void advertising_init(void)
 {
     uint32_t err_code;
@@ -658,8 +427,6 @@ static void advertising_init(void)
     ble_advertising_conn_cfg_tag_set(&m_advertising, APP_BLE_CONN_CFG_TAG);
 }
 
-/**@brief Function for the Power manager.
- */
 static void log_init(void)
 {
     uint32_t err_code = NRF_LOG_INIT(NULL);
@@ -668,17 +435,12 @@ static void log_init(void)
     NRF_LOG_DEFAULT_BACKENDS_INIT();
 }
 
-/**@brief   Function for initializing the GATT module.
- * @details The GATT module handles ATT_MTU and Data Length update procedures automatically.
- */
 static void gatt_init(void)
 {
     ret_code_t err_code = nrf_ble_gatt_init(&m_gatt, NULL);
     APP_ERROR_CHECK(err_code);
 }
 
-/**@brief Function for starting advertising.
- */
 static void advertising_start()
 {
     uint32_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
@@ -693,10 +455,6 @@ static void power_management_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-/**@brief Function for handling the idle state (main loop).
- *
- * @details If there is no pending log operation, then sleep until next the next event occurs.
- */
 static void idle_state_handle(void)
 {
     if (NRF_LOG_PROCESS() == false)
@@ -705,8 +463,6 @@ static void idle_state_handle(void)
     }
 }
 
-/**@brief Function for application main entry.
- */
 int main(void)
 {
     ret_code_t err_code;
@@ -739,7 +495,3 @@ int main(void)
         idle_state_handle();
     }
 }
-
-/**
- * @}
- */
