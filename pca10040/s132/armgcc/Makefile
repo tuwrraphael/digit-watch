@@ -1,8 +1,8 @@
-PROJECT_NAME     := ble_app_buttonless_dfu_pca10040_s132
+PROJECT_NAME     := digit_app
 TARGETS          := nrf52832_xxaa
 OUTPUT_DIRECTORY := _build
 
-SDK_ROOT := ../../../../../..
+SDK_ROOT := $(NRF_SDK_ROOT)
 PROJ_DIR := ../../..
 
 $(OUTPUT_DIRECTORY)/nrf52832_xxaa.out: \
@@ -246,3 +246,8 @@ SDK_CONFIG_FILE := ../config/sdk_config.h
 CMSIS_CONFIG_TOOL := $(SDK_ROOT)/external_tools/cmsisconfig/CMSIS_Configuration_Wizard.jar
 sdk_config:
 	java -jar $(CMSIS_CONFIG_TOOL) $(SDK_CONFIG_FILE)
+
+$(OUTPUT_DIRECTORY)/app_dfu_pkg.zip: $(OUTPUT_DIRECTORY)/nrf52832_xxaa.hex
+	$(SDK_ROOT)/nrfutil.exe pkg generate --hw-version 52 --application-version 1 --application $(OUTPUT_DIRECTORY)/nrf52832_xxaa.hex --sd-req 0xAF --key-file $(SDK_ROOT)/private.key $(OUTPUT_DIRECTORY)/app_dfu_pkg.zip
+
+package: $(OUTPUT_DIRECTORY)/app_dfu_pkg.zip
