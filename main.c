@@ -42,6 +42,7 @@
 #include "./app_rtc.h"
 #include "./battery_saver.h"
 #include "./app_shutdown_type.h"
+#include "./battery.h"
 
 #define APP_ADV_INTERVAL 300   /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_DURATION 18000 /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
@@ -73,11 +74,11 @@ NRF_BLE_GATT_DEF(m_gatt);
 NRF_BLE_QWR_DEF(m_qwr);
 BLE_ADVERTISING_DEF(m_advertising);
 
-APP_TIMER_DEF(test_timer_id);
+APP_TIMER_DEF(battery_measurement_timer_id);
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID; /**< Handle of the current connection. */
 static void advertising_start();
-static void test_timer_handler(void *p_context);
+static void battery_measurment_timer_handler(void *p_context);
 
 static app_shutdown_type_t app_shutdown_type = APP_SHUTDOWNTYPE_NONE;
 
@@ -206,9 +207,9 @@ static void pm_evt_handler(pm_evt_t const *p_evt)
 static void timers_init(void)
 {
     uint32_t err_code = app_timer_init();
-    err_code = app_timer_create(&test_timer_id,
-                                APP_TIMER_MODE_SINGLE_SHOT,
-                                test_timer_handler);
+    err_code = app_timer_create(&battery_measurement_timer_id,
+                                APP_TIMER_MODE_REPEATED,
+                                battery_measurment_timer_handler);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -300,7 +301,7 @@ static void conn_params_init(void)
 
 static void application_timers_start(void)
 {
-    APP_ERROR_CHECK(app_timer_start(test_timer_id, APP_TIMER_TICKS(20000), NULL));
+    APP_ERROR_CHECK(app_timer_start(battery_measurement_timer_id, APP_TIMER_TICKS(1000), NULL));
 }
 
 static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
@@ -480,20 +481,22 @@ static void idle_state_handle(void)
     }
 }
 
-static void battery_saver_shutdown()
-{
-    NRF_LOG_INFO("Digit battery save shutdown.");
-    app_timer_stop_all();
-    display_uninit();
-    app_rtc_set_mode(APP_RTC_MODE_SHUTDOWN);
-    app_shutdown_type = APP_SHUTDOWNTYPE_POWER;
-    nrf_sdh_disable_request();
-}
-
-static void test_timer_handler(void *p_context)
+static void battery_measurment_timer_handler(void *p_context)
 {
     UNUSED_PARAMETER(p_context);
-    battery_saver_shutdown();
+    battery_management_trigger();
+}
+
+static void battery_management_callback(battery_state_t *state)
+{
+    if (state->battery_level != BATTERY_LEVEL_OK)
+    {
+        NRF_LOG_INFO("Digit battery save shutdown.");
+        app_timer_stop_all();
+        display_uninit();
+        app_shutdown_type = APP_SHUTDOWNTYPE_POWER;
+        nrf_sdh_disable_request();
+    }
 }
 
 int main(void)
@@ -503,9 +506,9 @@ int main(void)
     power_management_init();
     if (!start_battery_saver())
     {
-        ret_code_t err_code;
-        err_code = ble_dfu_buttonless_async_svci_init();
-        APP_ERROR_CHECK(err_code);
+        // ret_code_t err_code;
+        // err_code = ble_dfu_buttonless_async_svci_init();
+        // APP_ERROR_CHECK(err_code);
 
         ble_stack_init();
         peer_manager_init();
@@ -516,7 +519,7 @@ int main(void)
         conn_params_init();
 
         NRF_LOG_INFO("Digit started.");
-
+        battery_management_init(&battery_management_callback);
         application_timers_start();
         advertising_start();
         display_init();

@@ -1,9 +1,15 @@
 #ifndef APP_BATTERY_H
 #define APP_BATTERY_H
 
+typedef enum {
+	BATTERY_LEVEL_OK,
+	BATTERY_LEVEL_LOW,
+	BATTERY_LEVEL_CRITICAL
+} battery_level_t;
+
 typedef struct {
 	uint16_t value;
-	bool battery_low_warning;
+	battery_level_t battery_level;
 } battery_state_t;
 
 typedef void(*battery_management_callback_t)(battery_state_t *battery_state);

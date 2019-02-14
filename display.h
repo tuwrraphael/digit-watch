@@ -24,4 +24,6 @@ void display_enable();
 
 void display_disable();
 
+void display_init_off();
+
 #endif // !APP_DISPLAY_H

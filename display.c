@@ -17,6 +17,7 @@
 static const nrfx_spim_t spi = NRFX_SPIM_INSTANCE(SPI_INSTANCE);
 static uint32_t display_buffer[4 * 128];
 static bool display_enabled = false;
+static bool display_initialized = false;
 static bool disp_initialized = false;
 
 static void gpio_setup()
@@ -213,10 +214,14 @@ void draw_time_indicator(float s, float indicator_length, uint8_t thickness)
 
 void display_init()
 {
-	gpio_setup();
-	extcomin_setup();
-	display_enable();
-	APP_ERROR_CHECK(nrf_gfx_init(&display_definition));
+	if (!display_initialized)
+	{
+		display_initialized = true;
+		gpio_setup();
+		extcomin_setup();
+		display_enable();
+		APP_ERROR_CHECK(nrf_gfx_init(&display_definition));
+	}
 }
 
 // ensure spi is down already
@@ -240,9 +245,18 @@ void display_enable()
 	display_enabled = true;
 }
 
+void display_init_off() {
+	gpio_setup();
+	nrfx_gpiote_out_clear(DISPLAY_DISP);
+}
+
 void display_uninit()
 {
-	display_disable();
-	extcomin_uninit();
-	nrf_gfx_uninit(&display_definition);
+	if (display_initialized)
+	{
+		display_initialized = false;
+		display_disable();
+		extcomin_uninit();
+		nrf_gfx_uninit(&display_definition);
+	}
 }
