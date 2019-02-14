@@ -18,4 +18,6 @@ ret_code_t battery_management_init(battery_management_callback_t callback);
 
 void battery_management_trigger(void);
 
+uint8_t battery_level_percentage(battery_state_t *battery_state);
+
 #endif

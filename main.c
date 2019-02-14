@@ -21,7 +21,6 @@
 #include "app_timer.h"
 #include "peer_manager.h"
 #include "peer_manager_handler.h"
-#include "ble_hci.h"
 #include "ble_advdata.h"
 #include "ble_advertising.h"
 #include "ble_conn_state.h"
@@ -36,6 +35,8 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 #include "nrf_bootloader_info.h"
+#include "ble_bas.h"
+#include "ble_dis.h"
 
 #include "./device_information.h"
 #include "./display.h"
@@ -72,6 +73,9 @@
 
 NRF_BLE_GATT_DEF(m_gatt);
 NRF_BLE_QWR_DEF(m_qwr);
+
+BLE_BAS_DEF(m_bas);
+
 BLE_ADVERTISING_DEF(m_advertising);
 
 APP_TIMER_DEF(battery_measurement_timer_id);
@@ -82,7 +86,9 @@ static void battery_measurment_timer_handler(void *p_context);
 
 static app_shutdown_type_t app_shutdown_type = APP_SHUTDOWNTYPE_NONE;
 
-static ble_uuid_t m_adv_uuids[] = {{BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE}};
+static ble_uuid_t m_adv_uuids[] = {
+    {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE},
+    {BLE_UUID_BATTERY_SERVICE, BLE_UUID_TYPE_BLE}};
 
 static bool app_shutdown_handler(nrf_pwr_mgmt_evt_t event)
 {
@@ -250,6 +256,8 @@ static void services_init(void)
     uint32_t err_code;
     nrf_ble_qwr_init_t qwr_init = {0};
     ble_dfu_buttonless_init_t dfus_init = {0};
+    ble_bas_init_t bas_init;
+    ble_dis_init_t dis_init;
 
     // Initialize Queued Write Module.
     qwr_init.error_handler = nrf_qwr_error_handler;
@@ -260,6 +268,23 @@ static void services_init(void)
     dfus_init.evt_handler = ble_dfu_evt_handler;
 
     err_code = ble_dfu_buttonless_init(&dfus_init);
+    APP_ERROR_CHECK(err_code);
+
+    memset(&bas_init, 0, sizeof(bas_init));
+    bas_init.evt_handler = NULL;
+    bas_init.support_notification = false;
+    bas_init.p_report_ref = NULL;
+    bas_init.initial_batt_level = 0;
+    bas_init.bl_rd_sec = SEC_OPEN;
+    bas_init.bl_cccd_wr_sec = SEC_OPEN;
+    bas_init.bl_report_rd_sec = SEC_OPEN;
+    err_code = ble_bas_init(&m_bas, &bas_init);
+    APP_ERROR_CHECK(err_code);
+
+    memset(&dis_init, 0, sizeof(dis_init));
+    ble_srv_ascii_to_utf8(&dis_init.manufact_name_str, (char *)MANUFACTURER_NAME);
+    dis_init.dis_char_rd_sec = SEC_OPEN;
+    err_code = ble_dis_init(&dis_init);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -497,6 +522,7 @@ static void battery_management_callback(battery_state_t *state)
         app_shutdown_type = APP_SHUTDOWNTYPE_POWER;
         nrf_sdh_disable_request();
     }
+    ble_bas_battery_level_update(&m_bas, battery_level_percentage(state), BLE_CONN_HANDLE_ALL);
 }
 
 int main(void)

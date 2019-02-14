@@ -5,6 +5,8 @@
 
 #define BATTERY_LOW_THRESHOLD (739) // 2.6V * (1/6/0.6) * 2^10
 #define BATTERY_CRITICAL_THRESHOLD (711) // 2.5V * (1/6/0.6) * 2^10
+#define BATTERY_FULL (853) // 3V * (1/6/0.6) * 2^10
+#define BATTERY_RANGE (BATTERY_FULL - BATTERY_LOW_THRESHOLD)
 static const bool uninitialize = true; //stop easydma to save power
 
 static nrf_saadc_value_t bms_buffer;
@@ -71,4 +73,9 @@ void battery_management_trigger(void)
 	}
 	err_code = nrfx_saadc_sample();
 	APP_ERROR_CHECK(err_code);
+}
+
+uint8_t battery_level_percentage(battery_state_t *state) {
+	uint8_t remaining = state->value - BATTERY_LOW_THRESHOLD;
+	return (uint8_t)(((double)remaining/(double)BATTERY_RANGE) * 100);
 }
