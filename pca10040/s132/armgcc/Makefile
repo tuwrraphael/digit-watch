@@ -13,6 +13,8 @@ SRC_FILES += \
   $(PROJ_DIR)/main.c \
   $(PROJ_DIR)/display.c \
   $(PROJ_DIR)/display_extcomin.c \
+  $(PROJ_DIR)/app_rtc.c \
+  $(PROJ_DIR)/battery_saver.c \
   $(SDK_ROOT)/components/libraries/gfx/nrf_gfx.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_spim.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_rtc.c \
@@ -48,7 +50,6 @@ SRC_FILES += \
   $(SDK_ROOT)/components/libraries/experimental_section_vars/nrf_section_iter.c \
   $(SDK_ROOT)/components/libraries/strerror/nrf_strerror.c \
   $(SDK_ROOT)/integration/nrfx/legacy/nrf_drv_clock.c \
-  $(SDK_ROOT)/integration/nrfx/legacy/nrf_drv_uart.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_clock.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_gpiote.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_power_clock.c \
@@ -155,6 +156,7 @@ CFLAGS += -DNRF_DFU_TRANSPORT_BLE=1
 CFLAGS += -DNRF_SD_BLE_API_VERSION=6
 CFLAGS += -DS132
 CFLAGS += -DSOFTDEVICE_PRESENT
+CFLAGS += -DCONFIG_NFCT_PINS_AS_GPIOS
 CFLAGS += -DSWI_DISABLE0
 CFLAGS += -mcpu=cortex-m4
 CFLAGS += -mthumb -mabi=aapcs

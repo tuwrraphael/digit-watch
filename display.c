@@ -17,6 +17,7 @@
 static const nrfx_spim_t spi = NRFX_SPIM_INSTANCE(SPI_INSTANCE);
 static uint32_t display_buffer[4 * 128];
 static bool display_enabled = false;
+static bool disp_initialized = false;
 
 static void gpio_setup()
 {
@@ -25,7 +26,12 @@ static void gpio_setup()
 		APP_ERROR_CHECK(nrfx_gpiote_init());
 	}
 	nrfx_gpiote_out_config_t config = NRFX_GPIOTE_CONFIG_OUT_SIMPLE(false);
+	if (disp_initialized)
+	{
+		nrfx_gpiote_out_uninit(DISPLAY_DISP);
+	}
 	nrfx_gpiote_out_init(DISPLAY_DISP, &config);
+	disp_initialized = true;
 }
 
 static void spi_setup()
@@ -237,6 +243,6 @@ void display_enable()
 void display_uninit()
 {
 	display_disable();
-	//TODO extcomin uninit
+	extcomin_uninit();
 	nrf_gfx_uninit(&display_definition);
 }

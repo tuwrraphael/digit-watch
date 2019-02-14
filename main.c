@@ -39,6 +39,9 @@
 
 #include "./device_information.h"
 #include "./display.h"
+#include "./app_rtc.h"
+#include "./battery_saver.h"
+#include "./app_shutdown_type.h"
 
 #define APP_ADV_INTERVAL 300   /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_DURATION 18000 /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
@@ -70,8 +73,13 @@ NRF_BLE_GATT_DEF(m_gatt);
 NRF_BLE_QWR_DEF(m_qwr);
 BLE_ADVERTISING_DEF(m_advertising);
 
+APP_TIMER_DEF(test_timer_id);
+
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID; /**< Handle of the current connection. */
 static void advertising_start();
+static void test_timer_handler(void *p_context);
+
+static app_shutdown_type_t app_shutdown_type = APP_SHUTDOWNTYPE_NONE;
 
 static ble_uuid_t m_adv_uuids[] = {{BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE}};
 
@@ -80,6 +88,7 @@ static bool app_shutdown_handler(nrf_pwr_mgmt_evt_t event)
     switch (event)
     {
     case NRF_PWR_MGMT_EVT_PREPARE_DFU:
+        app_shutdown_type = APP_SHUTDOWNTYPE_DFU;
         NRF_LOG_INFO("Power management wants to reset to DFU mode.");
         break;
 
@@ -92,20 +101,24 @@ static bool app_shutdown_handler(nrf_pwr_mgmt_evt_t event)
 }
 NRF_PWR_MGMT_HANDLER_REGISTER(app_shutdown_handler, 0);
 
-static void buttonless_dfu_sdh_state_observer(nrf_sdh_state_evt_t state, void *p_context)
+static void app_sdh_state_observer_cb(nrf_sdh_state_evt_t state, void *p_context)
 {
     if (state == NRF_SDH_EVT_STATE_DISABLED)
     {
-        // Softdevice was disabled before going into reset. Inform bootloader to skip CRC on next boot.
-        nrf_power_gpregret2_set(BOOTLOADER_DFU_SKIP_CRC);
-
-        //Go to system off.
-        nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_GOTO_SYSOFF);
+        if (app_shutdown_type == APP_SHUTDOWNTYPE_DFU)
+        {
+            nrf_power_gpregret2_set(BOOTLOADER_DFU_SKIP_CRC);
+            nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_GOTO_SYSOFF);
+        }
+        else if (app_shutdown_type == APP_SHUTDOWNTYPE_POWER)
+        {
+            enter_battery_saver();
+        }
     }
 }
-NRF_SDH_STATE_OBSERVER(m_buttonless_dfu_state_obs, 0) =
+NRF_SDH_STATE_OBSERVER(app_sdh_state_observer, 0) =
     {
-        .handler = buttonless_dfu_sdh_state_observer,
+        .handler = app_sdh_state_observer_cb,
 };
 
 static void advertising_config_get(ble_adv_modes_config_t *p_config)
@@ -193,6 +206,9 @@ static void pm_evt_handler(pm_evt_t const *p_evt)
 static void timers_init(void)
 {
     uint32_t err_code = app_timer_init();
+    err_code = app_timer_create(&test_timer_id,
+                                APP_TIMER_MODE_SINGLE_SHOT,
+                                test_timer_handler);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -284,6 +300,7 @@ static void conn_params_init(void)
 
 static void application_timers_start(void)
 {
+    APP_ERROR_CHECK(app_timer_start(test_timer_id, APP_TIMER_TICKS(20000), NULL));
 }
 
 static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
@@ -463,34 +480,52 @@ static void idle_state_handle(void)
     }
 }
 
+static void battery_saver_shutdown()
+{
+    NRF_LOG_INFO("Digit battery save shutdown.");
+    app_timer_stop_all();
+    display_uninit();
+    app_rtc_set_mode(APP_RTC_MODE_SHUTDOWN);
+    app_shutdown_type = APP_SHUTDOWNTYPE_POWER;
+    nrf_sdh_disable_request();
+}
+
+static void test_timer_handler(void *p_context)
+{
+    UNUSED_PARAMETER(p_context);
+    battery_saver_shutdown();
+}
+
 int main(void)
 {
-    ret_code_t err_code;
-
     log_init();
-    err_code = ble_dfu_buttonless_async_svci_init();
-    APP_ERROR_CHECK(err_code);
-
     timers_init();
     power_management_init();
-    ble_stack_init();
-    peer_manager_init();
-    gap_params_init();
-    gatt_init();
-    advertising_init();
-    services_init();
-    conn_params_init();
+    if (!start_battery_saver())
+    {
+        ret_code_t err_code;
+        err_code = ble_dfu_buttonless_async_svci_init();
+        APP_ERROR_CHECK(err_code);
 
-    NRF_LOG_INFO("Digit started.");
+        ble_stack_init();
+        peer_manager_init();
+        gap_params_init();
+        gatt_init();
+        advertising_init();
+        services_init();
+        conn_params_init();
 
-    application_timers_start();
-    advertising_start();
+        NRF_LOG_INFO("Digit started.");
 
-    display_init();
-    draw_time_indicator(3, 10, 1);
-    transfer_buffer_to_display();
-    switch_display_mode();
+        application_timers_start();
+        advertising_start();
+        display_init();
 
+        draw_time_indicator(3, 10, 1);
+        transfer_buffer_to_display();
+        switch_display_mode();
+        sd_power_dcdc_mode_set(NRF_POWER_DCDC_ENABLE);
+    }
     for (;;)
     {
         idle_state_handle();

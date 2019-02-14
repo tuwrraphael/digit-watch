@@ -4,6 +4,9 @@
         "nrf_rtc.h": "c",
         "nrfx.h": "c",
         "nrfx_config.h": "c",
-        "nrfx_clock.h": "c"
+        "nrfx_clock.h": "c",
+        "nrfx_gpiote.h": "c",
+        "app_timer.h": "c",
+        "nrf_sdh_ble.h": "c"
     }
 }
