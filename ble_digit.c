@@ -1,75 +1,38 @@
 #include "sdk_common.h"
+#include "ble_bas.h"
 #include <string.h>
 #include "ble_srv_common.h"
+#include "ble_conn_state.h"
 #include "nrf_log.h"
-
 #include "./ble_digit.h"
-#include "./cts_date.h"
 
-#define INVALID_VALUE 255
-#define CTS_DATE_SIZE 9
-
-static void on_connect(ble_digit_t *p_digit, ble_evt_t const * p_ble_evt)
+static void on_write(ble_digit_t *p_digit, ble_evt_t const *p_ble_evt)
 {
-	p_digit->conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
-}
-
-static void on_disconnect(ble_digit_t * p_digit, ble_evt_t const * p_ble_evt)
-{
-	UNUSED_PARAMETER(p_ble_evt);
-	p_digit->conn_handle = BLE_CONN_HANDLE_INVALID;
-}
-
-static void on_write(ble_digit_t * p_digit, ble_evt_t const * p_ble_evt)
-{
-	if (!p_digit->is_notification_supported)
+	ble_gatts_evt_write_t const *p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
+	if ((p_evt_write->handle == p_digit->value_char_handles.value_handle))
 	{
-		return;
-	}
-	ble_gatts_evt_write_t const * p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
-
-	if ((p_evt_write->handle == p_digit->value_char_handles.cccd_handle)
-		&& (p_evt_write->len == 2))
-	{
-		return;
-		//CCCD event handler stuff
-	}
-	if ((p_evt_write->handle == p_digit->value_char_handles.value_handle)) {
-		if (p_evt_write->len == 9) {
-			cts_date_t cts_date;
-			cts_date.year = uint16_decode(&p_evt_write->data[0]);
-			cts_date.month = p_evt_write->data[2];
-			cts_date.day = p_evt_write->data[3];
-			cts_date.hour = p_evt_write->data[4];
-			cts_date.minute = p_evt_write->data[5];
-			cts_date.second = p_evt_write->data[6];
-			cts_date.dayOfWeek = p_evt_write->data[7];
-			cts_date.fraction = p_evt_write->data[8];
-			if (NULL != p_digit->cts_received) {
-				p_digit->cts_received(&cts_date);
-			}
+		if (p_evt_write->len == 2)
+		{
+			NRF_LOG_INFO("got %d, %d", p_evt_write->data[0], p_evt_write->data[1]);
 		}
-		else {
+		else
+		{
 			NRF_LOG_ERROR("Insufficient data length for cts: %d.", p_evt_write->len);
 		}
 	}
 }
 
-
-void ble_digit_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
+void ble_digit_on_ble_evt(ble_evt_t const *p_ble_evt, void *p_context)
 {
+	if ((p_context == NULL) || (p_ble_evt == NULL))
+	{
+		return;
+	}
+
 	ble_digit_t *p_digit = (ble_digit_t *)p_context;
 
 	switch (p_ble_evt->header.evt_id)
 	{
-	case BLE_GAP_EVT_CONNECTED:
-		on_connect(p_digit, p_ble_evt);
-		break;
-
-	case BLE_GAP_EVT_DISCONNECTED:
-		on_disconnect(p_digit, p_ble_evt);
-		break;
-
 	case BLE_GATTS_EVT_WRITE:
 		on_write(p_digit, p_ble_evt);
 		break;
@@ -79,84 +42,44 @@ void ble_digit_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
 	}
 }
 
-static uint32_t value_char_add(ble_digit_t * p_digit, const ble_digit_init_t * p_digit_init)
+static ret_code_t value_char_add(ble_digit_t *p_digit, const ble_digit_init_t *p_digit_init)
 {
-	ble_gatts_char_md_t char_md;
-	ble_gatts_attr_md_t cccd_md;
-	ble_gatts_attr_t    attr_char_value;
+	ret_code_t err_code;
+	ble_add_char_params_t add_char_params;
 
-	ble_gatts_attr_md_t attr_md;
-	uint8_t             initial_value;
-	ble_uuid_t			ble_uuid;
+	memset(&add_char_params, 0, sizeof(add_char_params));
+	add_char_params.uuid_type = p_digit->uuid_type;
+	add_char_params.uuid = DIGIT_UUID_VALUE_CHAR;
+	add_char_params.max_len = 25; //TODO
+	add_char_params.init_len = 0;
+	add_char_params.p_init_value = NULL;
+	add_char_params.char_props.notify = false;
+	add_char_params.char_props.read = 0;
+	add_char_params.char_props.write = 1;
+	add_char_params.cccd_write_access = SEC_NO_ACCESS;
+	add_char_params.read_access = SEC_NO_ACCESS;
+	add_char_params.write_access = SEC_JUST_WORKS;
+	add_char_params.is_value_user = true;
 
-	if (p_digit->is_notification_supported)
-	{
-		memset(&cccd_md, 0, sizeof(cccd_md));
-		BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.read_perm);
-		BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.write_perm);
-		cccd_md.vloc = BLE_GATTS_VLOC_STACK;
-	}
-
-	memset(&char_md, 0, sizeof(char_md));
-
-	char_md.char_props.read = 1;
-	char_md.char_props.notify = (p_digit->is_notification_supported) ? 1 : 0;
-	char_md.p_char_user_desc = NULL;
-	char_md.p_char_pf = NULL;
-	char_md.p_user_desc_md = NULL;
-	char_md.p_cccd_md = (p_digit->is_notification_supported) ? &cccd_md : NULL;
-	char_md.p_sccd_md = NULL;
-
-	ble_uuid.type = p_digit->uuid_type;
-	ble_uuid.uuid = DIGIT_UUID_VALUE_CHAR;
-
-	memset(&attr_md, 0, sizeof(attr_md));
-
-	BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.read_perm);
-	BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.write_perm);
-	attr_md.vloc = BLE_GATTS_VLOC_STACK;
-	attr_md.rd_auth = 0;
-	attr_md.wr_auth = 0;
-	attr_md.vlen = 0;
-
-	initial_value = p_digit_init->initial_value;
-
-	memset(&attr_char_value, 0, sizeof(attr_char_value));
-
-	attr_char_value.p_uuid = &ble_uuid;
-	attr_char_value.p_attr_md = &attr_md;
-	attr_char_value.init_len = sizeof(uint8_t);
-	attr_char_value.init_offs = 0;
-	attr_char_value.max_len = sizeof(uint8_t) * CTS_DATE_SIZE;
-	attr_char_value.p_value = &initial_value;
-
-	p_digit->cts_received = p_digit_init->cts_received;
-
-	return sd_ble_gatts_characteristic_add(p_digit->service_handle,
-		&char_md,
-		&attr_char_value,
-		&p_digit->value_char_handles);
+	err_code = characteristic_add(p_digit->service_handle,
+								  &add_char_params,
+								  &(p_digit->value_char_handles));
+	return err_code;
 }
 
-
-uint32_t ble_digit_init(ble_digit_t * p_digit, const ble_digit_init_t * p_digit_init)
+ret_code_t ble_digit_init(ble_digit_t *p_digit, const ble_digit_init_t *p_digit_init)
 {
 	if (p_digit == NULL || p_digit_init == NULL)
 	{
 		return NRF_ERROR_NULL;
 	}
 
-	uint32_t   err_code;
+	ret_code_t err_code;
+
 	ble_uuid_t ble_uuid;
-
-	p_digit->conn_handle = BLE_CONN_HANDLE_INVALID;
-	p_digit->is_notification_supported = p_digit_init->support_notification;
-	p_digit->last_value = INVALID_VALUE;
-
-	ble_uuid128_t base_uuid = { DIGIT_UUID_BASE };
+	ble_uuid128_t base_uuid = {DIGIT_UUID_BASE};
 	err_code = sd_ble_uuid_vs_add(&base_uuid, &p_digit->uuid_type);
 	VERIFY_SUCCESS(err_code);
-
 	ble_uuid.type = p_digit->uuid_type;
 	ble_uuid.uuid = DIGIT_UUID_SERVICE;
 	err_code = sd_ble_gatts_service_add(BLE_GATTS_SRVC_TYPE_PRIMARY, &ble_uuid, &p_digit->service_handle);
@@ -166,58 +89,4 @@ uint32_t ble_digit_init(ble_digit_t * p_digit, const ble_digit_init_t * p_digit_
 	VERIFY_SUCCESS(err_code);
 
 	return NRF_SUCCESS;
-}
-
-
-uint32_t ble_digit_value_update(ble_digit_t * p_digit, uint8_t value)
-{
-	if (p_digit == NULL)
-	{
-		return NRF_ERROR_NULL;
-	}
-
-	uint32_t err_code = NRF_SUCCESS;
-	ble_gatts_value_t gatts_value;
-
-	if (value != p_digit->last_value)
-	{
-		memset(&gatts_value, 0, sizeof(gatts_value));
-
-		gatts_value.len = sizeof(uint8_t);
-		gatts_value.offset = 0;
-		gatts_value.p_value = &value;
-
-		err_code = sd_ble_gatts_value_set(p_digit->conn_handle,
-			p_digit->value_char_handles.value_handle,
-			&gatts_value);
-		if (err_code == NRF_SUCCESS)
-		{
-			p_digit->last_value = value;
-		}
-		else
-		{
-			return err_code;
-		}
-
-		if ((p_digit->conn_handle != BLE_CONN_HANDLE_INVALID) && p_digit->is_notification_supported)
-		{
-			ble_gatts_hvx_params_t hvx_params;
-
-			memset(&hvx_params, 0, sizeof(hvx_params));
-
-			hvx_params.handle = p_digit->value_char_handles.value_handle;
-			hvx_params.type = BLE_GATT_HVX_NOTIFICATION;
-			hvx_params.offset = gatts_value.offset;
-			hvx_params.p_len = &gatts_value.len;
-			hvx_params.p_data = gatts_value.p_value;
-
-			err_code = sd_ble_gatts_hvx(p_digit->conn_handle, &hvx_params);
-		}
-		else
-		{
-			err_code = NRF_ERROR_INVALID_STATE;
-		}
-	}
-
-	return err_code;
 }

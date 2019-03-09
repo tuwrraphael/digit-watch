@@ -46,6 +46,7 @@
 #include "./app_shutdown_type.h"
 #include "./battery.h"
 #include "./timing_constants.h"
+#include "./ble_digit.h"
 
 #define APP_ADV_INTERVAL 300   /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_DURATION 18000 /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
@@ -77,6 +78,7 @@ NRF_BLE_GATT_DEF(m_gatt);           /**< GATT module instance. */
 NRF_BLE_QWR_DEF(m_qwr);             /**< Context for the Queued Write module.*/
 BLE_ADVERTISING_DEF(m_advertising); /**< Advertising module instance. */
 BLE_BAS_DEF(m_bas);
+BLE_DIGIT_DEF(m_digit);
 APP_TIMER_DEF(battery_measurement_timer_id);
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID; /**< Handle of the current connection. */
@@ -257,6 +259,7 @@ static void services_init(void)
     ble_dfu_buttonless_init_t dfus_init = {0};
     ble_bas_init_t bas_init;
     ble_dis_init_t dis_init;
+    ble_digit_init_t digit_init;
 
     // Initialize Queued Write Module.
     qwr_init.error_handler = nrf_qwr_error_handler;
@@ -284,6 +287,10 @@ static void services_init(void)
     ble_srv_ascii_to_utf8(&dis_init.manufact_name_str, (char *)MANUFACTURER_NAME);
     dis_init.dis_char_rd_sec = SEC_JUST_WORKS;
     err_code = ble_dis_init(&dis_init);
+    APP_ERROR_CHECK(err_code);
+
+    memset(&digit_init, 0, sizeof(digit_init));
+    err_code = ble_digit_init(&m_digit, &digit_init);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -485,10 +492,10 @@ static void gatt_init(void)
 
 static void advertising_start()
 {
-        uint32_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
-        APP_ERROR_CHECK(err_code);
+    uint32_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
+    APP_ERROR_CHECK(err_code);
 
-        NRF_LOG_DEBUG("advertising is started");
+    NRF_LOG_DEBUG("advertising is started");
 }
 
 static void power_management_init(void)

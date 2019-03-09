@@ -16,6 +16,7 @@ SRC_FILES += \
   $(PROJ_DIR)/app_rtc.c \
   $(PROJ_DIR)/battery_saver.c \
   $(PROJ_DIR)/battery.c \
+  $(PROJ_DIR)/ble_digit.c \
   $(SDK_ROOT)/components/libraries/gfx/nrf_gfx.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_spim.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_rtc.c \
