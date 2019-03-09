@@ -4,6 +4,7 @@
             "name": "pca10040/s132",
             "includePath": [
                 "${workspaceFolder}/pca10040/s132/config",
+                "${workspaceFolder}/digit-watch-ui/include",
                 "${env:NRF_SDK_ROOT}/**"
             ],
             "compilerPath": "${env:ARM_GCC_BIN}/arm-none-eabi-gcc.exe",

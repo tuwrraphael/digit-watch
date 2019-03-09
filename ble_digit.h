@@ -6,6 +6,7 @@
 #include "ble.h"
 #include "ble_srv_common.h"
 #include "nrf_sdh_ble.h"
+#include "digit_ui_model.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -19,7 +20,7 @@ extern "C"
 		0x23, 0xD1, 0x13, 0xEF, 0x5F, 0x78, 0x23, 0x15, 0xDE, 0xEF, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00 \
 	}
 #define DIGIT_UUID_SERVICE 0x1523
-#define DIGIT_UUID_VALUE_CHAR 0x1524
+#define DIGIT_UUID_CTS_CHAR 0x1805
 
 #define BLE_DIGIT_DEF(_name)                          \
 	static ble_digit_t _name;                         \
@@ -32,13 +33,15 @@ extern "C"
 
 	typedef struct
 	{
+		digit_ui_state_t *state;
 	} ble_digit_init_t;
 
 	struct ble_digit_s
 	{
 		uint16_t service_handle;
-		ble_gatts_char_handles_t value_char_handles;
+		ble_gatts_char_handles_t cts_char_handles;
 		uint8_t uuid_type;
+		digit_ui_state_t *state;
 	};
 
 	ret_code_t ble_digit_init(ble_digit_t *p_digit, const ble_digit_init_t *p_digit_init);

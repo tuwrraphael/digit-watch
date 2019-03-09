@@ -47,6 +47,7 @@
 #include "./battery.h"
 #include "./timing_constants.h"
 #include "./ble_digit.h"
+#include "digit_ui_model.h"
 
 #define APP_ADV_INTERVAL 300   /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_DURATION 18000 /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
@@ -86,6 +87,8 @@ static void advertising_start();                         /**< Forward declaratio
 static void battery_measurment_timer_handler(void *p_context);
 
 static app_shutdown_type_t app_shutdown_type = APP_SHUTDOWNTYPE_NONE;
+
+static digit_ui_state_t ui_state = DIGIT_UI_STATE_DEFAULT;
 
 static ble_uuid_t m_adv_uuids[] = {
     {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE},
@@ -290,6 +293,7 @@ static void services_init(void)
     APP_ERROR_CHECK(err_code);
 
     memset(&digit_init, 0, sizeof(digit_init));
+    digit_init.state = &ui_state;
     err_code = ble_digit_init(&m_digit, &digit_init);
     APP_ERROR_CHECK(err_code);
 }

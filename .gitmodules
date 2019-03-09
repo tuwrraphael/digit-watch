@@ -1,0 +1,3 @@
+[submodule "digit-watch-ui"]
+	path = digit-watch-ui
+	url = https://github.com/tuwrraphael/digit-watch-ui
