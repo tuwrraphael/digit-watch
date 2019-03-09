@@ -44,6 +44,7 @@
 #include "./battery_saver.h"
 #include "./app_shutdown_type.h"
 #include "./battery.h"
+#include "./timing_constants.h"
 
 #define APP_ADV_INTERVAL 300   /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_DURATION 18000 /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
@@ -326,7 +327,7 @@ static void conn_params_init(void)
 
 static void application_timers_start(void)
 {
-    APP_ERROR_CHECK(app_timer_start(battery_measurement_timer_id, APP_TIMER_TICKS(1000), NULL));
+    APP_ERROR_CHECK(app_timer_start(battery_measurement_timer_id, APP_TIMER_TICKS(DEVICE_ON_BATTERY_MEASUREMENT_INTERVAL_MS), NULL));
 }
 
 static void on_adv_evt(ble_adv_evt_t ble_adv_evt)

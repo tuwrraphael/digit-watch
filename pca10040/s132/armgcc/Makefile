@@ -130,7 +130,6 @@ INC_FOLDERS += \
   $(SDK_ROOT)/integration/nrfx \
   $(SDK_ROOT)/components/libraries/fds \
   $(SDK_ROOT)/components/ble/ble_advertising \
-  $(SDK_ROOT)/components/ble/ble_services/ble_bas_c \
   $(SDK_ROOT)/components/ble/ble_services/ble_bas \
   $(SDK_ROOT)/components/ble/ble_services/ble_dis \
   $(SDK_ROOT)/components/libraries/atomic_flags \

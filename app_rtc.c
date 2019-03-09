@@ -5,11 +5,12 @@
 #include "nrf_sdh.h"
 
 #include "./app_rtc.h"
+#include "./timing_constants.h"
 
 #define APP_RTC_MODE_DEFAULT (APP_RTC_MODE_ACTIVE)
 #define APP_RTC_TIME_1SEC (8)
 #define APP_RTC_TIME_1MIN (60*APP_RTC_TIME_1SEC)
-#define APP_RTC_TIME_15MIN (15*APP_RTC_TIME_1MIN)
+#define APP_RTC_TIME_SHUTDOWN (DEVICE_OFF_BATTERY_MEASUREMENT_INTERVAL_MIN *APP_RTC_TIME_1MIN)
 
 static nrfx_rtc_t rtc = NRFX_RTC_INSTANCE(2);
 static app_rtc_mode_t app_rtc_mode = APP_RTC_MODE_ACTIVE;
@@ -68,7 +69,7 @@ void app_rtc_set_mode(app_rtc_mode_t mode)
         val = APP_RTC_TIME_1SEC;
         break;
     case APP_RTC_MODE_SHUTDOWN:
-        val = APP_RTC_TIME_15MIN;
+        val = APP_RTC_TIME_SHUTDOWN;
         break;
     }
     APP_ERROR_CHECK(nrfx_rtc_cc_set(&rtc, 0, val, true));
