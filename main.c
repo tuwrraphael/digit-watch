@@ -21,6 +21,7 @@
 #include "app_timer.h"
 #include "peer_manager.h"
 #include "peer_manager_handler.h"
+#include "ble_hci.h"
 #include "ble_advdata.h"
 #include "ble_advertising.h"
 #include "ble_conn_state.h"
@@ -72,17 +73,14 @@
 
 #define DEAD_BEEF 0xDEADBEEF /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
-NRF_BLE_GATT_DEF(m_gatt);
-NRF_BLE_QWR_DEF(m_qwr);
-
+NRF_BLE_GATT_DEF(m_gatt);           /**< GATT module instance. */
+NRF_BLE_QWR_DEF(m_qwr);             /**< Context for the Queued Write module.*/
+BLE_ADVERTISING_DEF(m_advertising); /**< Advertising module instance. */
 BLE_BAS_DEF(m_bas);
-
-BLE_ADVERTISING_DEF(m_advertising);
-
 APP_TIMER_DEF(battery_measurement_timer_id);
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID; /**< Handle of the current connection. */
-static void advertising_start();
+static void advertising_start();                         /**< Forward declaration of advertising start function */
 static void battery_measurment_timer_handler(void *p_context);
 
 static app_shutdown_type_t app_shutdown_type = APP_SHUTDOWNTYPE_NONE;
@@ -284,7 +282,7 @@ static void services_init(void)
 
     memset(&dis_init, 0, sizeof(dis_init));
     ble_srv_ascii_to_utf8(&dis_init.manufact_name_str, (char *)MANUFACTURER_NAME);
-    dis_init.dis_char_rd_sec = SEC_OPEN;
+    dis_init.dis_char_rd_sec = SEC_JUST_WORKS;
     err_code = ble_dis_init(&dis_init);
     APP_ERROR_CHECK(err_code);
 }
@@ -351,16 +349,16 @@ static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context)
 
     switch (p_ble_evt->header.evt_id)
     {
+    case BLE_GAP_EVT_DISCONNECTED:
+        NRF_LOG_INFO("Disconnected, reason %d.", p_ble_evt->evt.gap_evt.params.disconnected.reason);
+        m_conn_handle = BLE_CONN_HANDLE_INVALID;
+        break;
     case BLE_GAP_EVT_CONNECTED:
         NRF_LOG_INFO("Connected.");
         APP_ERROR_CHECK(err_code);
         m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
         err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
         APP_ERROR_CHECK(err_code);
-        break;
-    case BLE_GAP_EVT_DISCONNECTED:
-        NRF_LOG_INFO("Disconnected, reason %d.", p_ble_evt->evt.gap_evt.params.disconnected.reason);
-        m_conn_handle = BLE_CONN_HANDLE_INVALID;
         break;
     case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
     {
@@ -487,10 +485,10 @@ static void gatt_init(void)
 
 static void advertising_start()
 {
-    uint32_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
-    APP_ERROR_CHECK(err_code);
+        uint32_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
+        APP_ERROR_CHECK(err_code);
 
-    NRF_LOG_DEBUG("advertising is started");
+        NRF_LOG_DEBUG("advertising is started");
 }
 
 static void power_management_init(void)
@@ -533,9 +531,9 @@ int main(void)
     power_management_init();
     if (!start_battery_saver())
     {
-        // ret_code_t err_code;
-        // err_code = ble_dfu_buttonless_async_svci_init();
-        // APP_ERROR_CHECK(err_code);
+        ret_code_t err_code;
+        err_code = ble_dfu_buttonless_async_svci_init();
+        APP_ERROR_CHECK(err_code);
 
         ble_stack_init();
         peer_manager_init();
@@ -555,6 +553,7 @@ int main(void)
         transfer_buffer_to_display();
         switch_display_mode();
         sd_power_dcdc_mode_set(NRF_POWER_DCDC_ENABLE);
+        battery_management_trigger();
     }
     for (;;)
     {
