@@ -9,6 +9,8 @@
         "app_timer.h": "c",
         "nrf_sdh_ble.h": "c",
         "ble_srv_common.h": "c",
-        "app_util.h": "c"
+        "app_util.h": "c",
+        "mem_manager.h": "c",
+        "peer_manager.h": "c"
     }
 }

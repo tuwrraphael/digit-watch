@@ -20,6 +20,9 @@ extern "C"
 		0x23, 0xD1, 0x13, 0xEF, 0x5F, 0x78, 0x23, 0x15, 0xDE, 0xEF, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00 \
 	}
 #define DIGIT_UUID_SERVICE 0x1523
+#define DIGIT_UUID_EVENT_CHAR 0x1524
+#define DIGIT_UUID_DIRECTIONS_CHAR 0x1525
+#define DIGIT_UUID_DIRECTIONS_LEG_CHAR 0x1526
 #define DIGIT_UUID_CTS_CHAR 0x1805
 
 #define BLE_DIGIT_DEF(_name)                          \
@@ -40,6 +43,9 @@ extern "C"
 	{
 		uint16_t service_handle;
 		ble_gatts_char_handles_t cts_char_handles;
+		ble_gatts_char_handles_t event_char_handles;
+		ble_gatts_char_handles_t directions_char_handles;
+		ble_gatts_char_handles_t directions_leg_char_handles;
 		uint8_t uuid_type;
 		digit_ui_state_t *state;
 	};

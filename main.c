@@ -212,6 +212,19 @@ static void pm_evt_handler(pm_evt_t const *p_evt)
 {
     pm_handler_on_pm_evt(p_evt);
     pm_handler_flash_clean(p_evt);
+    switch (p_evt->evt_id)
+    {
+    case PM_EVT_CONN_SEC_FAILED:
+        if (PM_PEER_ID_INVALID != p_evt->peer_id)
+        {
+            NRF_LOG_ERROR("Deleted peer %d", p_evt->peer_id);
+            pm_peer_delete(p_evt->peer_id);
+        }
+        break;
+
+    default:
+        break;
+    }
 }
 
 static void timers_init(void)

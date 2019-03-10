@@ -18,6 +18,7 @@ SRC_FILES += \
   $(PROJ_DIR)/battery.c \
   $(PROJ_DIR)/ble_digit.c \
   $(SDK_ROOT)/components/libraries/gfx/nrf_gfx.c \
+  $(SDK_ROOT)/components/libraries/mem_manager/mem_manager.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_spim.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_rtc.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_ppi.c \
@@ -140,6 +141,7 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/libraries/svc \
   $(SDK_ROOT)/components/libraries/log/src \
   $(SDK_ROOT)/components/libraries/gfx/ \
+  $(SDK_ROOT)/components/libraries/mem_manager/ \
   $(SDK_ROOT)/external/thedotfactory_fonts \
   $(PROJ_DIR)/digit-watch-ui/include
 
