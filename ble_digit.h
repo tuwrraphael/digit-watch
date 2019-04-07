@@ -33,10 +33,12 @@ extern "C"
 						 &_name)
 
 	typedef struct ble_digit_s ble_digit_t;
+	typedef void(*ui_state_changed_callback_t)(void);
 
 	typedef struct
 	{
 		digit_ui_state_t *state;
+		ui_state_changed_callback_t ui_state_changed;
 	} ble_digit_init_t;
 
 	struct ble_digit_s
@@ -48,6 +50,7 @@ extern "C"
 		ble_gatts_char_handles_t directions_leg_char_handles;
 		uint8_t uuid_type;
 		digit_ui_state_t *state;
+		ui_state_changed_callback_t ui_state_changed;
 	};
 
 	ret_code_t ble_digit_init(ble_digit_t *p_digit, const ble_digit_init_t *p_digit_init);

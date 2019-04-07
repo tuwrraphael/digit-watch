@@ -38,7 +38,7 @@ static void read_cts(const uint8_t src[CTS_CHAR_LENGTH], time_t *dest)
 		.tm_hour = src[4],
 		.tm_mday = src[3],
 		.tm_mon = src[2],
-		.tm_year = uint16_decode(&src[0]),
+		.tm_year = uint16_decode(&src[0]) - 1900,
 		.tm_isdst = 0};
 	*dest = mktime(&parsed);
 }
@@ -51,12 +51,13 @@ static void on_write(ble_digit_t *p_digit, ble_evt_t const *p_ble_evt)
 		if (p_evt_write->len == CTS_CHAR_LENGTH)
 		{
 			read_cts(p_evt_write->data, &p_digit->state->current_time);
+			p_digit->ui_state_changed();
 			NRF_LOG_INFO("received %d = %d, %d, %d, %d, %d", p_digit->state->current_time,
 						 uint16_decode(&p_evt_write->data[0]),
 						 p_evt_write->data[2],
 						 p_evt_write->data[3],
 						 p_evt_write->data[4],
-						 p_evt_write->data[5])
+						 p_evt_write->data[5]);
 		}
 		else
 		{
@@ -65,12 +66,19 @@ static void on_write(ble_digit_t *p_digit, ble_evt_t const *p_ble_evt)
 	}
 	if ((p_evt_write->handle == p_digit->event_char_handles.value_handle))
 	{
-		if (p_evt_write->len >= (CTS_CHAR_LENGTH + 1) || p_evt_write->len <= CTS_CHAR_LENGTH + SUBJECT_LENGTH)
+		if (p_evt_write->len == 1 && p_evt_write->data[0] == 0) {
+			p_digit->state->display_options.event_active = 0;
+			p_digit->ui_state_changed();
+			NRF_LOG_INFO("deleted event");
+		}
+		else if (p_evt_write->len >= (CTS_CHAR_LENGTH + 1) || p_evt_write->len <= CTS_CHAR_LENGTH + SUBJECT_LENGTH)
 		{
 			read_cts(p_evt_write->data, &p_digit->state->event_start_time);
 			const char *subjectPtr = (char *)p_evt_write->data + CTS_CHAR_LENGTH;
 			p_digit->state->event_subject[0] = '\0';
 			strncat(p_digit->state->event_subject, subjectPtr, min(SUBJECT_LENGTH - 1, p_evt_write->len - CTS_CHAR_LENGTH));
+			p_digit->state->display_options.event_active = 1;
+			p_digit->ui_state_changed();
 			NRF_LOG_INFO("event %s at %d", p_digit->state->event_subject, p_digit->state->event_start_time);
 		}
 		else
@@ -80,8 +88,17 @@ static void on_write(ble_digit_t *p_digit, ble_evt_t const *p_ble_evt)
 	}
 	if ((p_evt_write->handle == p_digit->directions_char_handles.value_handle))
 	{
-		if (p_evt_write->len == (CTS_CHAR_LENGTH * 2 + 1))
+		if (p_evt_write->len == 1 && p_evt_write->data[0] == 0) {
+			p_digit->state->display_options.directions_active = 0;
+			p_digit->state->directions.legs_count = 0;
+			p_digit->state->directions.valid_legs = 0;
+			nrf_free(p_digit->state->directions.legs);
+			p_digit->ui_state_changed();
+			NRF_LOG_INFO("deleted directions");
+		}
+		else if (p_evt_write->len == (CTS_CHAR_LENGTH * 2 + 1))
 		{
+			p_digit->state->display_options.directions_active = 1;
 			read_cts(p_evt_write->data + 1, &p_digit->state->directions.departure_time);
 			read_cts(p_evt_write->data + 1 + CTS_CHAR_LENGTH, &p_digit->state->directions.arrival_time);
 			p_digit->state->directions.legs_count = p_evt_write->data[0];
@@ -103,6 +120,7 @@ static void on_write(ble_digit_t *p_digit, ble_evt_t const *p_ble_evt)
 					p_digit->state->directions.legs_count = 0;
 				}
 			}
+			p_digit->ui_state_changed();
 			NRF_LOG_INFO("directions %d -> %d, %d legs", p_digit->state->directions.departure_time, p_digit->state->directions.arrival_time,
 						 p_digit->state->directions.legs_count);
 		}
@@ -151,6 +169,7 @@ static void on_write(ble_digit_t *p_digit, ble_evt_t const *p_ble_evt)
 					leg->arrival_stop[0] = '\0';
 					strncat(leg->arrival_stop, textPtr, min(STOP_LENGTH - 1, arrival_size));
 					p_digit->state->directions.valid_legs |= (1 << index);
+					p_digit->ui_state_changed();
 					NRF_LOG_INFO("leg %d at %d from %s to %s u %s/%s", index, leg->departure_time, leg->departure_stop, leg->arrival_stop, leg->line, leg->direction);
 				}
 			}
@@ -289,6 +308,7 @@ ret_code_t ble_digit_init(ble_digit_t *p_digit, const ble_digit_init_t *p_digit_
 		return NRF_ERROR_NULL;
 	}
 	p_digit->state = p_digit_init->state;
+	p_digit->ui_state_changed = p_digit_init->ui_state_changed;
 	ret_code_t err_code;
 	ble_uuid_t ble_uuid;
 	ble_uuid128_t base_uuid = {DIGIT_UUID_BASE};

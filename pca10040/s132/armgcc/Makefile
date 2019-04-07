@@ -17,6 +17,11 @@ SRC_FILES += \
   $(PROJ_DIR)/battery_saver.c \
   $(PROJ_DIR)/battery.c \
   $(PROJ_DIR)/ble_digit.c \
+  $(PROJ_DIR)/digit-watch-ui/src/buffer_display.c \
+  $(PROJ_DIR)/digit-watch-ui/src/digit_ui.c \
+  $(PROJ_DIR)/digit-watch-ui/src/digit_ui_gfx.c \
+  $(PROJ_DIR)/digit-watch-ui/src/digit_assets.c \
+  $(PROJ_DIR)/digit-watch-ui/src/roboto8pt.c \
   $(SDK_ROOT)/components/libraries/gfx/nrf_gfx.c \
   $(SDK_ROOT)/components/libraries/mem_manager/mem_manager.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_spim.c \

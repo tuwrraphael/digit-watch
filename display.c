@@ -10,12 +10,11 @@
 
 #include "./display_extcomin.h"
 #include "./display.h"
+#include "buffer_display.h"
 
 #define SPI_INSTANCE 1 //SPI 0 is blocked by softdevice
-#define M_PI (3.14159265358979323846)
 
 static const nrfx_spim_t spi = NRFX_SPIM_INSTANCE(SPI_INSTANCE);
-static uint32_t display_buffer[4 * 128];
 static bool display_enabled = false;
 static bool display_initialized = false;
 static bool disp_initialized = false;
@@ -48,76 +47,6 @@ static void spi_setup()
 	spi_config.bit_order = NRF_SPIM_BIT_ORDER_LSB_FIRST;
 	APP_ERROR_CHECK(nrfx_spim_init(&spi, &spi_config, NULL, NULL));
 }
-
-static void clear_display_buffer()
-{
-	memset(display_buffer, 0xFFFFFFFF, sizeof(display_buffer));
-}
-
-static ret_code_t disp_def_init(void)
-{
-	clear_display_buffer();
-	return NRF_SUCCESS;
-}
-
-static void disp_def_uninit(void)
-{
-}
-
-static void disp_def_pixel_draw(uint16_t m_x, uint16_t m_y, uint32_t color)
-{
-	uint16_t x = 128 - m_y;
-	uint16_t y = m_x;
-	uint16_t index = 4 * y + (x / 32);
-	uint32_t mask = (1 << x % 32);
-	if (color)
-	{
-		display_buffer[index] &= ~(mask);
-	}
-	else
-	{
-		display_buffer[index] |= mask;
-	}
-}
-
-static void disp_def_rect_draw(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t color)
-{
-	uint16_t i, z;
-	for (i = 0; i < height; i++)
-	{
-		for (z = 0; z < width; z++)
-		{
-			disp_def_pixel_draw(x + z, y + i, color);
-		}
-	}
-}
-
-static void disp_def_dummy_display(void)
-{
-}
-
-static void disp_def_rotation_set(nrf_lcd_rotation_t rotation)
-{
-}
-
-static void disp_def_display_invert(bool invert)
-{
-}
-
-static lcd_cb_t display_cb = {
-	.height = DISPLAY_HEIGHT,
-	.width = DISPLAY_WIDTH};
-
-const nrf_lcd_t display_definition = {
-	.lcd_init = disp_def_init,
-	.lcd_uninit = disp_def_uninit,
-	.lcd_pixel_draw = disp_def_pixel_draw,
-	.lcd_rect_draw = disp_def_rect_draw,
-	.lcd_display = disp_def_dummy_display,
-	.lcd_rotation_set = disp_def_rotation_set,
-	.lcd_display_invert = disp_def_display_invert,
-	.p_lcd_cb = &display_cb};
-
 static void format_line_from_buffer(uint8_t *buf, uint8_t linenr)
 {
 	*buf = 0;
@@ -135,9 +64,6 @@ static void format_line_from_buffer(uint8_t *buf, uint8_t linenr)
 		}
 	}
 }
-
-//extern const nrf_gfx_font_desc_t orkney_8ptFontInfo;
-//static const nrf_gfx_font_desc_t * p_font = &orkney_8ptFontInfo;
 
 static void init_display_spi()
 {
@@ -171,7 +97,6 @@ void transfer_buffer_to_display()
 		nrfx_spim_xfer_desc_t xfer_desc = NRFX_SPIM_XFER_TX(m_tx_buf2, transmit_length);
 		APP_ERROR_CHECK(nrfx_spim_xfer(&spi, &xfer_desc, 0));
 	}
-	clear_display_buffer();
 }
 
 void switch_display_mode()
@@ -186,32 +111,6 @@ void switch_display_mode()
 	nrfx_spim_uninit(&spi);
 }
 
-void draw_time_indicator(float s, float indicator_length, uint8_t thickness)
-{
-
-	float arg = ((float)(15 - s) * M_PI) / ((float)30);
-	uint8_t x = 64 + (cos(arg) * indicator_length);
-	uint8_t y = 64 - (sin(arg) * indicator_length);
-	if (x < 64 || y < 64)
-	{
-		nrf_gfx_line_t line = NRF_GFX_LINE(
-			x,
-			y,
-			64,
-			64, thickness);
-		APP_ERROR_CHECK(nrf_gfx_line_draw(&display_definition, &line, 1));
-	}
-	else
-	{
-		nrf_gfx_line_t line = NRF_GFX_LINE(
-			64,
-			64,
-			x,
-			y, thickness);
-		APP_ERROR_CHECK(nrf_gfx_line_draw(&display_definition, &line, 1));
-	}
-}
-
 void display_init()
 {
 	if (!display_initialized)
@@ -220,7 +119,7 @@ void display_init()
 		gpio_setup();
 		extcomin_setup();
 		display_enable();
-		APP_ERROR_CHECK(nrf_gfx_init(&display_definition));
+		APP_ERROR_CHECK(nrf_gfx_init(&nrf_lcd_buffer_display));
 	}
 }
 
@@ -256,7 +155,7 @@ void display_uninit()
 	{
 		display_initialized = false;
 		display_disable();
-		extcomin_uninit();
-		nrf_gfx_uninit(&display_definition);
+		extcomin_uninit();		
+		nrf_gfx_uninit(&nrf_lcd_buffer_display);
 	}
 }

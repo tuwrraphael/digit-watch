@@ -48,6 +48,7 @@
 #include "./timing_constants.h"
 #include "./ble_digit.h"
 #include "digit_ui_model.h"
+#include "digit_ui.h"
 
 #define APP_ADV_INTERVAL 300   /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_DURATION 18000 /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
@@ -81,10 +82,15 @@ BLE_ADVERTISING_DEF(m_advertising); /**< Advertising module instance. */
 BLE_BAS_DEF(m_bas);
 BLE_DIGIT_DEF(m_digit);
 APP_TIMER_DEF(battery_measurement_timer_id);
+APP_TIMER_DEF(ui_timer_id);
+APP_TIMER_DEF(time_timer_id);
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID; /**< Handle of the current connection. */
 static void advertising_start();                         /**< Forward declaration of advertising start function */
 static void battery_measurment_timer_handler(void *p_context);
+static void ui_timer_handler(void *p_context);
+static void time_timer_handler(void *p_context);
+static void ui_render();
 
 static app_shutdown_type_t app_shutdown_type = APP_SHUTDOWNTYPE_NONE;
 
@@ -139,6 +145,9 @@ static void advertising_config_get(ble_adv_modes_config_t *p_config)
     p_config->ble_adv_fast_enabled = true;
     p_config->ble_adv_fast_interval = APP_ADV_INTERVAL;
     p_config->ble_adv_fast_timeout = APP_ADV_DURATION;
+    p_config->ble_adv_slow_enabled = true;
+    p_config->ble_adv_slow_interval = 8000;
+    p_config->ble_adv_slow_timeout = 0;
 }
 
 static void disconnect(uint16_t conn_handle, void *p_context)
@@ -234,6 +243,14 @@ static void timers_init(void)
                                 APP_TIMER_MODE_REPEATED,
                                 battery_measurment_timer_handler);
     APP_ERROR_CHECK(err_code);
+    err_code = app_timer_create(&ui_timer_id,
+                                APP_TIMER_MODE_REPEATED,
+                                ui_timer_handler);
+    APP_ERROR_CHECK(err_code);
+    err_code = app_timer_create(&time_timer_id,
+                                APP_TIMER_MODE_REPEATED,
+                                time_timer_handler);
+    APP_ERROR_CHECK(err_code);
 }
 
 static void gap_params_init(void)
@@ -307,6 +324,7 @@ static void services_init(void)
 
     memset(&digit_init, 0, sizeof(digit_init));
     digit_init.state = &ui_state;
+    digit_init.ui_state_changed = ui_render;
     err_code = ble_digit_init(&m_digit, &digit_init);
     APP_ERROR_CHECK(err_code);
 }
@@ -350,6 +368,8 @@ static void conn_params_init(void)
 static void application_timers_start(void)
 {
     APP_ERROR_CHECK(app_timer_start(battery_measurement_timer_id, APP_TIMER_TICKS(DEVICE_ON_BATTERY_MEASUREMENT_INTERVAL_MS), NULL));
+    APP_ERROR_CHECK(app_timer_start(ui_timer_id, APP_TIMER_TICKS(UI_RENDER_MS), NULL));
+    APP_ERROR_CHECK(app_timer_start(time_timer_id, APP_TIMER_TICKS(TIME_TIMER_MS), NULL));
 }
 
 static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
@@ -535,6 +555,25 @@ static void battery_measurment_timer_handler(void *p_context)
     battery_management_trigger();
 }
 
+static void ui_timer_handler(void *p_context)
+{
+    UNUSED_PARAMETER(p_context);
+    ui_render();
+}
+
+static void time_timer_handler(void *p_context)
+{
+    UNUSED_PARAMETER(p_context);
+    ui_state.current_time += TIME_TIMER_S;
+}
+
+static void ui_render()
+{
+    digit_ui_render(&ui_state);
+    transfer_buffer_to_display();
+    switch_display_mode();
+}
+
 static void battery_management_callback(battery_state_t *state)
 {
     if (state->battery_level != BATTERY_LEVEL_OK)
@@ -573,9 +612,6 @@ int main(void)
         advertising_start();
         display_init();
 
-        draw_time_indicator(3, 10, 1);
-        transfer_buffer_to_display();
-        switch_display_mode();
         sd_power_dcdc_mode_set(NRF_POWER_DCDC_ENABLE);
         battery_management_trigger();
     }

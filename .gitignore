@@ -10,3 +10,4 @@
 /.vs/digit-watch/v15/Browse.VC.db
 /.vs/digit-watch/v15/.suo
 /.vs/digit-watch/v15/Browse.VC.opendb
+.vscode/ipch/*
