@@ -240,7 +240,7 @@ static void timers_init(void)
 {
     uint32_t err_code = app_timer_init();
     err_code = app_timer_create(&battery_measurement_timer_id,
-                                APP_TIMER_MODE_REPEATED,
+                                APP_TIMER_MODE_SINGLE_SHOT,
                                 battery_measurment_timer_handler);
     APP_ERROR_CHECK(err_code);
     err_code = app_timer_create(&ui_timer_id,
@@ -367,7 +367,6 @@ static void conn_params_init(void)
 
 static void application_timers_start(void)
 {
-    APP_ERROR_CHECK(app_timer_start(battery_measurement_timer_id, APP_TIMER_TICKS(DEVICE_ON_BATTERY_MEASUREMENT_INTERVAL_MS), NULL));
     APP_ERROR_CHECK(app_timer_start(ui_timer_id, APP_TIMER_TICKS(UI_RENDER_MS), NULL));
     APP_ERROR_CHECK(app_timer_start(time_timer_id, APP_TIMER_TICKS(TIME_TIMER_MS), NULL));
 }
@@ -576,13 +575,23 @@ static void ui_render()
 
 static void battery_management_callback(battery_state_t *state)
 {
-    if (state->battery_level != BATTERY_LEVEL_OK)
+    switch (state->battery_level)
     {
+    case BATTERY_LEVEL_OK:
+        APP_ERROR_CHECK(app_timer_start(battery_measurement_timer_id, APP_TIMER_TICKS(DEVICE_ON_BATTERY_MEASUREMENT_INTERVAL_MS), NULL));
+        break;
+    case BATTERY_LEVEL_LOW:
+        APP_ERROR_CHECK(app_timer_start(battery_measurement_timer_id, APP_TIMER_TICKS(DEVICE_LOW_BATTERY_MEASUREMENT_INTERVAL_MS), NULL));
+        break;
+    case BATTERY_LEVEL_CRITICAL:
         NRF_LOG_INFO("Digit battery save shutdown.");
         app_timer_stop_all();
         display_uninit();
         app_shutdown_type = APP_SHUTDOWNTYPE_POWER;
         nrf_sdh_disable_request();
+        break;
+    default:
+        break;
     }
     ble_bas_battery_level_update(&m_bas, battery_level_percentage(state), BLE_CONN_HANDLE_ALL);
 }
@@ -613,6 +622,8 @@ int main(void)
         display_init();
 
         sd_power_dcdc_mode_set(NRF_POWER_DCDC_ENABLE);
+
+        // removing this won't ever start the measurement timer
         battery_management_trigger();
     }
     for (;;)

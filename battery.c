@@ -3,10 +3,10 @@
 
 #include "./battery.h"
 
-#define BATTERY_LOW_THRESHOLD (739) // 2.6V * (1/6/0.6) * 2^10
+#define BATTERY_LOW_THRESHOLD (754) // 2.65V * (1/6/0.6) * 2^10
 #define BATTERY_CRITICAL_THRESHOLD (711) // 2.5V * (1/6/0.6) * 2^10
-#define BATTERY_FULL (853) // 3V * (1/6/0.6) * 2^10
-#define BATTERY_RANGE (BATTERY_FULL - BATTERY_LOW_THRESHOLD)
+#define BATTERY_FULL (890) // 3.13V * (1/6/0.6) * 2^10
+#define BATTERY_RANGE (BATTERY_FULL - BATTERY_CRITICAL_THRESHOLD)
 static const bool uninitialize = true; //stop easydma to save power
 
 static nrf_saadc_value_t bms_buffer;
