@@ -5,12 +5,15 @@
 #include "./battery.h"
 #include "nrf_log.h"
 #include "./display.h"
+#include "nrf_soc.h"
 
-#define POWERSAVE_REG_VAL (7)
+#define POWERSAVE_REG_VAL (7 << 8) //use byte 1
 
 static bool check_powersave_mode()
 {
-    return nrf_power_gpregret_get() == POWERSAVE_REG_VAL;
+    uint32_t gpregret_value;
+    sd_power_gpregret_get(0, &gpregret_value);
+    return (gpregret_value & POWERSAVE_REG_VAL) > 0;
 }
 
 static void shutdown_maintainance_callback()
@@ -55,6 +58,7 @@ bool start_battery_saver(void)
 
 void enter_battery_saver(void)
 {
-    nrf_power_gpregret_set(POWERSAVE_REG_VAL);
+    uint32_t gpregret_value = POWERSAVE_REG_VAL;
+    sd_power_gpregret_set(0, gpregret_value);
     nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_RESET);
 }
