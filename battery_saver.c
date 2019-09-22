@@ -26,6 +26,7 @@ static void battery_management_callback(battery_state_t *battery_state)
     switch (battery_state->battery_level)
     {
     case BATTERY_LEVEL_OK:
+    case BATTERY_LEVEL_APPROACHING_LOW:
         app_rtc_release();
         nrf_power_gpregret_set(0);
         nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_RESET);

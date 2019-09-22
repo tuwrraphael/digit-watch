@@ -3,16 +3,32 @@
 
 #include "./battery.h"
 
-#define BATTERY_LOW_THRESHOLD (754) // 2.65V * (1/6/0.6) * 2^10
-#define BATTERY_CRITICAL_THRESHOLD (711) // 2.5V * (1/6/0.6) * 2^10
-#define BATTERY_FULL (890) // 3.13V * (1/6/0.6) * 2^10
+#define BATTERY_CRITICAL_THRESHOLD (711)		// 2.5V * (1/6/0.6) * 2^10 -> 0%
+#define BATTERY_LOW_THRESHOLD (739)				// 2.60V * (1/6/0.6) * 2^10 -> 15%
+#define BATTERY_APPROACHING_LOW_THRESHOLD (754) // 2.62V * (1/6/0.6) * 2^10 -> 24%
+#define BATTERY_FULL (890)						// 3.13V * (1/6/0.6) * 2^10 -> 100%
 #define BATTERY_RANGE (BATTERY_FULL - BATTERY_CRITICAL_THRESHOLD)
+
+#define ARRAY_LEN(x) (sizeof(x) / sizeof(x[0]))
+
 static const bool uninitialize = true; //stop easydma to save power
 
 static nrf_saadc_value_t bms_buffer;
 static battery_management_callback_t bms_callback;
 static battery_state_t battery_state;
 static bool initialized = false;
+
+typedef struct
+{
+	battery_level_t level;
+	uint16_t threshold;
+} battery_map_element_t;
+
+static battery_map_element_t battery_map[] = {
+	{.threshold = BATTERY_CRITICAL_THRESHOLD, .level = BATTERY_LEVEL_CRITICAL},
+	{.threshold = BATTERY_LOW_THRESHOLD, .level = BATTERY_LEVEL_LOW},
+	{.threshold = BATTERY_APPROACHING_LOW_THRESHOLD, .level = BATTERY_LEVEL_APPROACHING_LOW},
+};
 
 static void saadc_callback(nrfx_saadc_evt_t const *p_event)
 {
@@ -30,7 +46,15 @@ static void saadc_callback(nrfx_saadc_evt_t const *p_event)
 			APP_ERROR_CHECK(err_code);
 		}
 		battery_state.value = *(p_event->data.done.p_buffer);
-		battery_state.battery_level = battery_state.value < BATTERY_LOW_THRESHOLD ? (battery_state.value < BATTERY_CRITICAL_THRESHOLD ? BATTERY_LEVEL_CRITICAL : BATTERY_LEVEL_LOW) : BATTERY_LEVEL_OK;
+		battery_state.battery_level = BATTERY_LEVEL_OK;
+		for (uint8_t i = 0; i < ARRAY_LEN(battery_map); i++)
+		{
+			if (battery_state.value <= battery_map[i].threshold)
+			{
+				battery_state.battery_level = battery_map[i].level;
+				break;
+			}
+		}
 		bms_callback(&battery_state);
 	}
 }
@@ -75,7 +99,8 @@ void battery_management_trigger(void)
 	APP_ERROR_CHECK(err_code);
 }
 
-uint8_t battery_level_percentage(battery_state_t *state) {
-	uint8_t remaining = state->value - BATTERY_LOW_THRESHOLD;
-	return (uint8_t)(((double)remaining/(double)BATTERY_RANGE) * 100);
+uint8_t battery_level_percentage(battery_state_t *state)
+{
+	uint8_t remaining = state->value - BATTERY_CRITICAL_THRESHOLD;
+	return (uint8_t)(((double)remaining / (double)BATTERY_RANGE) * 100);
 }

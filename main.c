@@ -580,9 +580,9 @@ static void battery_management_callback(battery_state_t *state)
     case BATTERY_LEVEL_OK:
         APP_ERROR_CHECK(app_timer_start(battery_measurement_timer_id, APP_TIMER_TICKS(DEVICE_ON_BATTERY_MEASUREMENT_INTERVAL_MS), NULL));
         break;
+    case BATTERY_LEVEL_APPROACHING_LOW:
+        APP_ERROR_CHECK(app_timer_start(battery_measurement_timer_id, APP_TIMER_TICKS(DEVICE_APPROACHING_LOW_BATTERY_MEASUREMENT_INTERVAL_MS), NULL));
     case BATTERY_LEVEL_LOW:
-        APP_ERROR_CHECK(app_timer_start(battery_measurement_timer_id, APP_TIMER_TICKS(DEVICE_LOW_BATTERY_MEASUREMENT_INTERVAL_MS), NULL));
-        break;
     case BATTERY_LEVEL_CRITICAL:
         NRF_LOG_INFO("Digit battery save shutdown.");
         app_timer_stop_all();
