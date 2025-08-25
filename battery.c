@@ -4,8 +4,8 @@
 #include "./battery.h"
 
 #define BATTERY_CRITICAL_THRESHOLD (711)		// 2.5V * (1/6/0.6) * 2^10 -> 0%
-#define BATTERY_LOW_THRESHOLD (739)				// 2.60V * (1/6/0.6) * 2^10 -> 15%
-#define BATTERY_APPROACHING_LOW_THRESHOLD (754) // 2.62V * (1/6/0.6) * 2^10 -> 24%
+#define BATTERY_LOW_THRESHOLD (770)				// 2.60V * (1/6/0.6) * 2^10 -> 33%
+#define BATTERY_APPROACHING_LOW_THRESHOLD (780) // 2.62V * (1/6/0.6) * 2^10 -> 38%
 #define BATTERY_FULL (890)						// 3.13V * (1/6/0.6) * 2^10 -> 100%
 #define BATTERY_RANGE (BATTERY_FULL - BATTERY_CRITICAL_THRESHOLD)
 
@@ -55,6 +55,7 @@ static void saadc_callback(nrfx_saadc_evt_t const *p_event)
 				break;
 			}
 		}
+		// NRF_LOG_INFO("Battery measurement %u", battery_state.value);
 		bms_callback(&battery_state);
 	}
 }

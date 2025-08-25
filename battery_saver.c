@@ -6,13 +6,14 @@
 #include "nrf_log.h"
 #include "./display.h"
 #include "nrf_soc.h"
+#include "nrf_gpio.h"
+#include "digit_ui.h"
 
-#define POWERSAVE_REG_VAL (7 << 8) //use byte 1
+#define POWERSAVE_REG_VAL (1)
 
 static bool check_powersave_mode()
 {
-    uint32_t gpregret_value;
-    sd_power_gpregret_get(0, &gpregret_value);
+    uint8_t gpregret_value = nrf_power_gpregret_get();
     return (gpregret_value & POWERSAVE_REG_VAL) > 0;
 }
 
@@ -26,15 +27,15 @@ static void battery_management_callback(battery_state_t *battery_state)
     switch (battery_state->battery_level)
     {
     case BATTERY_LEVEL_OK:
-    case BATTERY_LEVEL_APPROACHING_LOW:
         app_rtc_release();
         nrf_power_gpregret_set(0);
         nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_RESET);
         break;
     case BATTERY_LEVEL_CRITICAL:
-        nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_STAY_IN_SYSOFF);
+        NRF_POWER->SYSTEMOFF = POWER_SYSTEMOFF_SYSTEMOFF_Enter;
         break;
     case BATTERY_LEVEL_LOW:
+    case BATTERY_LEVEL_APPROACHING_LOW:
     default:
         break;
     }
@@ -60,6 +61,6 @@ bool start_battery_saver(void)
 void enter_battery_saver(void)
 {
     uint32_t gpregret_value = POWERSAVE_REG_VAL;
-    sd_power_gpregret_set(0, gpregret_value);
+    nrf_power_gpregret_set(gpregret_value);
     nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_RESET);
 }

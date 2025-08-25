@@ -52,7 +52,7 @@ static void format_line_from_buffer(uint8_t *buf, uint8_t linenr)
 	*buf = 0;
 	buf++;
 	*buf = linenr;
-	uint16_t buffer_offset = linenr * 4;
+	uint16_t buffer_offset = ((linenr-1) * 4);
 	uint8_t shift;
 	uint8_t index;
 	for (index = 0; index < 4; index++)
@@ -68,6 +68,7 @@ static void format_line_from_buffer(uint8_t *buf, uint8_t linenr)
 static void init_display_spi()
 {
 	uint8_t m_tx_buf[] = {4, 0};
+	
 	nrfx_spim_xfer_desc_t xfer_desc = NRFX_SPIM_XFER_TX(m_tx_buf, sizeof(m_tx_buf));
 	APP_ERROR_CHECK(nrfx_spim_xfer(&spi, &xfer_desc, 0));
 }
@@ -106,6 +107,17 @@ void switch_display_mode()
 		return;
 	}
 	uint8_t m_tx_buf3[] = {0, 0};
+	nrfx_spim_xfer_desc_t xfer_desc = NRFX_SPIM_XFER_TX(m_tx_buf3, sizeof(m_tx_buf3));
+	APP_ERROR_CHECK(nrfx_spim_xfer(&spi, &xfer_desc, 0));
+	nrfx_spim_uninit(&spi);
+}
+
+void display_clear_all() {
+	if (!display_enabled)
+	{
+		return;
+	}
+	uint8_t m_tx_buf3[] = {0, 1};
 	nrfx_spim_xfer_desc_t xfer_desc = NRFX_SPIM_XFER_TX(m_tx_buf3, sizeof(m_tx_buf3));
 	APP_ERROR_CHECK(nrfx_spim_xfer(&spi, &xfer_desc, 0));
 	nrfx_spim_uninit(&spi);

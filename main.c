@@ -582,6 +582,7 @@ static void battery_management_callback(battery_state_t *state)
         break;
     case BATTERY_LEVEL_APPROACHING_LOW:
         APP_ERROR_CHECK(app_timer_start(battery_measurement_timer_id, APP_TIMER_TICKS(DEVICE_APPROACHING_LOW_BATTERY_MEASUREMENT_INTERVAL_MS), NULL));
+        break;
     case BATTERY_LEVEL_LOW:
     case BATTERY_LEVEL_CRITICAL:
         NRF_LOG_INFO("Digit battery save shutdown.");
@@ -599,15 +600,15 @@ static void battery_management_callback(battery_state_t *state)
 int main(void)
 {
     log_init();
+    ret_code_t err_code;
+    err_code = ble_dfu_buttonless_async_svci_init();
+    APP_ERROR_CHECK(err_code);
     timers_init();
     power_management_init();
     if (!start_battery_saver())
     {
-        ret_code_t err_code;
-        err_code = ble_dfu_buttonless_async_svci_init();
-        APP_ERROR_CHECK(err_code);
 
-        ble_stack_init();
+        ble_stack_init();   
         peer_manager_init();
         gap_params_init();
         gatt_init();
