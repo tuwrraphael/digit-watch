@@ -307,9 +307,9 @@ static void services_init(void)
 
     memset(&bas_init, 0, sizeof(bas_init));
     bas_init.evt_handler = NULL;
-    bas_init.support_notification = false;
+    bas_init.support_notification = true;
     bas_init.p_report_ref = NULL;
-    bas_init.initial_batt_level = 0;
+    bas_init.initial_batt_level = 100;
     bas_init.bl_rd_sec = SEC_OPEN;
     bas_init.bl_cccd_wr_sec = SEC_OPEN;
     bas_init.bl_report_rd_sec = SEC_OPEN;

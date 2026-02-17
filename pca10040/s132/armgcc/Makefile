@@ -61,7 +61,6 @@ $(PROJ_DIR)/main.c \
   $(SDK_ROOT)/components/libraries/sortlist/nrf_sortlist.c \
   $(SDK_ROOT)/components/libraries/strerror/nrf_strerror.c \
   $(SDK_ROOT)/integration/nrfx/legacy/nrf_drv_clock.c \
-  $(SDK_ROOT)/integration/nrfx/legacy/nrf_drv_uart.c \
   $(SDK_ROOT)/modules/nrfx/soc/nrfx_atomic.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_clock.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_gpiote.c \
@@ -276,12 +275,14 @@ sdk_config:
 	java -jar $(CMSIS_CONFIG_TOOL) $(SDK_CONFIG_FILE)
 
 $(OUTPUT_DIRECTORY)/merged.hex: $(OUTPUT_DIRECTORY)/nrf52832_xxaa.hex
-	C:/environments/srecord-1.63-win32/srec_cat.exe $(SDK_ROOT)/components/softdevice/s132/hex/s132_nrf52_7.2.0_softdevice.hex -Intel $(OUTPUT_DIRECTORY)/nrf52832_xxaa.hex -Intel -o $(OUTPUT_DIRECTORY)/merged.hex -Intel
+	srec_cat $(SDK_ROOT)/components/softdevice/s132/hex/s132_nrf52_7.2.0_softdevice.hex -Intel $(OUTPUT_DIRECTORY)/nrf52832_xxaa.hex -Intel -o $(OUTPUT_DIRECTORY)/merged.hex -Intel
 
 flash_dap: $(OUTPUT_DIRECTORY)/merged.hex
 	xcopy $(OUTPUT_DIRECTORY)\merged.hex E:\
 
 $(OUTPUT_DIRECTORY)/app_dfu_pkg.zip: $(OUTPUT_DIRECTORY)/nrf52832_xxaa.hex
-	$(SDK_ROOT)/nrfutil.exe pkg generate --hw-version 52 --application-version 1 --application $(OUTPUT_DIRECTORY)/nrf52832_xxaa.hex --sd-req 0x0101 --key-file $(SDK_ROOT)/private.key $(OUTPUT_DIRECTORY)/app_dfu_pkg.zip
+	nrfutil pkg generate --hw-version 52 --application-version 1 --application $(OUTPUT_DIRECTORY)/nrf52832_xxaa.hex --sd-req 0x0101 --key-file /workspaces/digit-watch/private.key $(OUTPUT_DIRECTORY)/app_dfu_pkg.zip
 
 package: $(OUTPUT_DIRECTORY)/app_dfu_pkg.zip
+
+merge: $(OUTPUT_DIRECTORY)/merged.hex
