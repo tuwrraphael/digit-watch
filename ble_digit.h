@@ -23,6 +23,7 @@ extern "C"
 #define DIGIT_UUID_EVENT_CHAR 0x1524
 #define DIGIT_UUID_DIRECTIONS_CHAR 0x1525
 #define DIGIT_UUID_DIRECTIONS_LEG_CHAR 0x1526
+#define DIGIT_UUID_BUTTON_CHAR 0x1527
 #define DIGIT_UUID_CTS_CHAR 0x1805
 
 #define BLE_DIGIT_DEF(_name)                          \
@@ -48,14 +49,20 @@ extern "C"
 		ble_gatts_char_handles_t event_char_handles;
 		ble_gatts_char_handles_t directions_char_handles;
 		ble_gatts_char_handles_t directions_leg_char_handles;
+		ble_gatts_char_handles_t button_char_handles;
 		uint8_t uuid_type;
 		digit_ui_state_t *state;
 		ui_state_changed_callback_t ui_state_changed;
+		uint8_t button_state;
 	};
 
 	ret_code_t ble_digit_init(ble_digit_t *p_digit, const ble_digit_init_t *p_digit_init);
 
 	void ble_digit_on_ble_evt(ble_evt_t const *p_ble_evt, void *p_context);
+
+	ret_code_t ble_digit_button_update(ble_digit_t *p_digit,
+								   uint8_t button_state,
+								   uint16_t conn_handle);
 
 #ifdef __cplusplus
 }

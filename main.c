@@ -49,6 +49,7 @@
 #include "./ble_digit.h"
 #include "digit_ui_model.h"
 #include "digit_ui.h"
+#include "button.h"
 
 #define APP_BLE_OBSERVER_PRIO 3 /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 #define APP_BLE_CONN_CFG_TAG 1  /**< A tag identifying the SoftDevice BLE configuration. */
@@ -573,6 +574,11 @@ static void ui_render()
     switch_display_mode();
 }
 
+static void button_event_handler(button_event_t event)
+{
+    ble_digit_button_update(&m_digit, event == BUTTON_EVENT_PRESSED ? 1 : 0, BLE_CONN_HANDLE_ALL);
+}
+
 static void battery_management_callback(battery_state_t *state)
 {
     switch (state->battery_level)
@@ -621,6 +627,7 @@ int main(void)
         application_timers_start();
         advertising_start();
         display_init();
+        button_init(button_event_handler);
 
         sd_power_dcdc_mode_set(NRF_POWER_DCDC_ENABLE);
 

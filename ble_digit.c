@@ -66,7 +66,8 @@ static void on_write(ble_digit_t *p_digit, ble_evt_t const *p_ble_evt)
 	}
 	if ((p_evt_write->handle == p_digit->event_char_handles.value_handle))
 	{
-		if (p_evt_write->len == 1 && p_evt_write->data[0] == 0) {
+		if (p_evt_write->len == 1 && p_evt_write->data[0] == 0)
+		{
 			p_digit->state->display_options.event_active = 0;
 			p_digit->ui_state_changed();
 			NRF_LOG_INFO("deleted event");
@@ -88,7 +89,8 @@ static void on_write(ble_digit_t *p_digit, ble_evt_t const *p_ble_evt)
 	}
 	if ((p_evt_write->handle == p_digit->directions_char_handles.value_handle))
 	{
-		if (p_evt_write->len == 1 && p_evt_write->data[0] == 0) {
+		if (p_evt_write->len == 1 && p_evt_write->data[0] == 0)
+		{
 			p_digit->state->display_options.directions_active = 0;
 			p_digit->state->directions.legs_count = 0;
 			p_digit->state->directions.valid_legs = 0;
@@ -301,6 +303,124 @@ static ret_code_t directions_leg_char_add(ble_digit_t *p_digit, const ble_digit_
 	return err_code;
 }
 
+static ret_code_t button_notification_send(ble_gatts_hvx_params_t * const p_hvx_params,
+                                            uint16_t                       conn_handle)
+{
+    ret_code_t err_code = sd_ble_gatts_hvx(conn_handle, p_hvx_params);
+    if (err_code == NRF_SUCCESS)
+    {
+        NRF_LOG_INFO("Button notification has been sent using conn_handle: 0x%04X", conn_handle);
+    }
+    else
+    {
+        NRF_LOG_DEBUG("Error: 0x%08X while sending notification with conn_handle: 0x%04X",
+                      err_code,
+                      conn_handle);
+    }
+    return err_code;
+}
+
+static ret_code_t button_char_add(ble_digit_t *p_digit, const ble_digit_init_t *p_digit_init)
+{
+	ret_code_t err_code;
+	ble_add_char_params_t add_char_params;
+
+	memset(&add_char_params, 0, sizeof(add_char_params));
+	add_char_params.uuid_type = p_digit->uuid_type;
+	add_char_params.uuid = DIGIT_UUID_BUTTON_CHAR;
+	add_char_params.max_len = 1;
+	add_char_params.init_len = 1;
+	add_char_params.p_init_value = 0;
+	add_char_params.char_props.notify = true;
+	add_char_params.char_props.read = 1;
+	add_char_params.char_props.write = 0;
+	add_char_params.cccd_write_access = SEC_JUST_WORKS;
+	add_char_params.read_access = SEC_JUST_WORKS;
+	add_char_params.write_access = SEC_NO_ACCESS;
+	add_char_params.is_value_user = false;
+
+	err_code = characteristic_add(p_digit->service_handle,
+								  &add_char_params,
+								  &(p_digit->button_char_handles));
+	return err_code;
+}
+
+ret_code_t ble_digit_button_update(ble_digit_t *p_digit,
+								   uint8_t button_state,
+								   uint16_t conn_handle)
+{
+	if (p_digit == NULL)
+	{
+		return NRF_ERROR_NULL;
+	}
+
+	ret_code_t err_code = NRF_SUCCESS;
+	ble_gatts_value_t gatts_value;
+
+	if (button_state != p_digit->button_state)
+	{
+		memset(&gatts_value, 0, sizeof(gatts_value));
+
+		gatts_value.len = sizeof(uint8_t);
+		gatts_value.offset = 0;
+		gatts_value.p_value = &button_state;
+
+		err_code = sd_ble_gatts_value_set(BLE_CONN_HANDLE_INVALID,
+										  p_digit->button_char_handles.value_handle,
+										  &gatts_value);
+		if (err_code == NRF_SUCCESS)
+		{
+			NRF_LOG_INFO("Button state has been updated: %d%%", button_state)
+
+			p_digit->button_state = button_state;
+		}
+		else
+		{
+			NRF_LOG_DEBUG("Error during button state update: 0x%08X", err_code)
+
+			return err_code;
+		}
+
+		ble_gatts_hvx_params_t hvx_params;
+
+		memset(&hvx_params, 0, sizeof(hvx_params));
+
+		hvx_params.handle = p_digit->button_char_handles.value_handle;
+		hvx_params.type = BLE_GATT_HVX_NOTIFICATION;
+		hvx_params.offset = gatts_value.offset;
+		hvx_params.p_len = &gatts_value.len;
+		hvx_params.p_data = gatts_value.p_value;
+
+		if (conn_handle == BLE_CONN_HANDLE_ALL)
+		{
+			ble_conn_state_conn_handle_list_t conn_handles = ble_conn_state_conn_handles();
+
+			for (uint32_t i = 0; i < conn_handles.len; i++)
+			{
+				if (ble_conn_state_status(conn_handles.conn_handles[i]) == BLE_CONN_STATUS_CONNECTED)
+				{
+					if (err_code == NRF_SUCCESS)
+					{
+						err_code = button_notification_send(&hvx_params,
+															conn_handles.conn_handles[i]);
+					}
+					else
+					{
+						UNUSED_RETURN_VALUE(button_notification_send(&hvx_params,
+																	 conn_handles.conn_handles[i]));
+					}
+				}
+			}
+		}
+		else
+		{
+			err_code = button_notification_send(&hvx_params, conn_handle);
+		}
+	}
+
+	return err_code;
+}
+
 ret_code_t ble_digit_init(ble_digit_t *p_digit, const ble_digit_init_t *p_digit_init)
 {
 	if (p_digit == NULL || p_digit_init == NULL || p_digit_init->state == NULL)
@@ -309,6 +429,7 @@ ret_code_t ble_digit_init(ble_digit_t *p_digit, const ble_digit_init_t *p_digit_
 	}
 	p_digit->state = p_digit_init->state;
 	p_digit->ui_state_changed = p_digit_init->ui_state_changed;
+	p_digit->button_state = 0;
 	ret_code_t err_code;
 	ble_uuid_t ble_uuid;
 	ble_uuid128_t base_uuid = {DIGIT_UUID_BASE};
@@ -326,6 +447,8 @@ ret_code_t ble_digit_init(ble_digit_t *p_digit, const ble_digit_init_t *p_digit_
 	err_code = directions_char_add(p_digit, p_digit_init);
 	VERIFY_SUCCESS(err_code);
 	err_code = directions_leg_char_add(p_digit, p_digit_init);
+	VERIFY_SUCCESS(err_code);
+	err_code = button_char_add(p_digit, p_digit_init);
 	VERIFY_SUCCESS(err_code);
 
 	VERIFY_SUCCESS(nrf_mem_init());
