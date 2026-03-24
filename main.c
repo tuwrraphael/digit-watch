@@ -596,6 +596,7 @@ static void battery_management_callback(battery_state_t *state)
         display_uninit();
         app_shutdown_type = APP_SHUTDOWNTYPE_POWER;
         nrf_sdh_disable_request();
+        return;
         break;
     default:
         break;

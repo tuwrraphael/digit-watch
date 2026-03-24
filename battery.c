@@ -38,6 +38,21 @@ static void saadc_callback(nrfx_saadc_evt_t const *p_event)
 		if (uninitialize && initialized)
 		{
 			nrfx_saadc_uninit();
+			volatile uint32_t temp1;
+			volatile uint32_t temp2;
+			volatile uint32_t temp3;
+
+			temp1 = *(volatile uint32_t *)0x40007640ul;
+			temp2 = *(volatile uint32_t *)0x40007644ul;
+			temp3 = *(volatile uint32_t *)0x40007648ul;
+
+			*(volatile uint32_t *)0x40007FFCul = 0ul;
+			*(volatile uint32_t *)0x40007FFCul;
+			*(volatile uint32_t *)0x40007FFCul = 1ul;
+
+			*(volatile uint32_t *)0x40007640ul = temp1;
+			*(volatile uint32_t *)0x40007644ul = temp2;
+			*(volatile uint32_t *)0x40007648ul = temp3;
 			initialized = false;
 		}
 		else

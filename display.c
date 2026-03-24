@@ -47,6 +47,15 @@ static void spi_setup()
 	spi_config.bit_order = NRF_SPIM_BIT_ORDER_LSB_FIRST;
 	APP_ERROR_CHECK(nrfx_spim_init(&spi, &spi_config, NULL, NULL));
 }
+
+static void spi_uninit()
+{
+	nrfx_spim_uninit(&spi);
+	*(volatile uint32_t *)0x40004FFC = 0;
+	*(volatile uint32_t *)0x40004FFC;
+	*(volatile uint32_t *)0x40004FFC = 1;
+}
+
 static void format_line_from_buffer(uint8_t *buf, uint8_t linenr)
 {
 	*buf = 0;
@@ -109,7 +118,7 @@ void switch_display_mode()
 	uint8_t m_tx_buf3[] = {0, 0};
 	nrfx_spim_xfer_desc_t xfer_desc = NRFX_SPIM_XFER_TX(m_tx_buf3, sizeof(m_tx_buf3));
 	APP_ERROR_CHECK(nrfx_spim_xfer(&spi, &xfer_desc, 0));
-	nrfx_spim_uninit(&spi);
+	spi_uninit();
 }
 
 void display_clear_all() {
@@ -120,7 +129,7 @@ void display_clear_all() {
 	uint8_t m_tx_buf3[] = {0, 1};
 	nrfx_spim_xfer_desc_t xfer_desc = NRFX_SPIM_XFER_TX(m_tx_buf3, sizeof(m_tx_buf3));
 	APP_ERROR_CHECK(nrfx_spim_xfer(&spi, &xfer_desc, 0));
-	nrfx_spim_uninit(&spi);
+	spi_uninit();
 }
 
 void display_init()
@@ -152,7 +161,7 @@ void display_enable()
 	nrfx_gpiote_out_set(DISPLAY_DISP);
 	nrf_delay_us(100);
 	init_display_spi();
-	nrfx_spim_uninit(&spi);
+	spi_uninit();
 	display_enabled = true;
 }
 
