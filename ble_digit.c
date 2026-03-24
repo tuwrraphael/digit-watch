@@ -24,7 +24,7 @@
 						 SECOND_LENGTH)
 
 #define LEGS_CHAR_LENGTH (CTS_CHAR_LENGTH + 2 * STOP_LENGTH + 1 + LINE_LENGTH + DIRECTION_LENGTH + 4)
-#define NOTIFICATION_COUNT_CHAR_LENGTH (1)
+#define NOTIFICATION_COUNT_CHAR_LENGTH (2)
 
 static uint8_t min(uint8_t m1, uint8_t m2)
 {
@@ -184,9 +184,10 @@ static void on_write(ble_digit_t *p_digit, ble_evt_t const *p_ble_evt)
 	}
 	if ((p_evt_write->handle == p_digit->notification_count_handles.value_handle))
 	{
-		if (p_evt_write->len == 1)
+		if (p_evt_write->len == 2)
 		{
 			p_digit->state->whatsapp_message_count = p_evt_write->data[0];
+			p_digit->state->email_count = p_evt_write->data[1];
 			p_digit->ui_state_changed();
 			NRF_LOG_INFO("whatsapp message count %d", p_digit->state->whatsapp_message_count);
 		}
