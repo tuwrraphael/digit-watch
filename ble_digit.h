@@ -24,6 +24,7 @@ extern "C"
 #define DIGIT_UUID_DIRECTIONS_CHAR 0x1525
 #define DIGIT_UUID_DIRECTIONS_LEG_CHAR 0x1526
 #define DIGIT_UUID_BUTTON_CHAR 0x1527
+#define DIGIT_UUID_NOTIFICATION_COUNT_CHAR 0x1528
 #define DIGIT_UUID_CTS_CHAR 0x1805
 
 #define BLE_DIGIT_DEF(_name)                          \
@@ -50,6 +51,7 @@ extern "C"
 		ble_gatts_char_handles_t directions_char_handles;
 		ble_gatts_char_handles_t directions_leg_char_handles;
 		ble_gatts_char_handles_t button_char_handles;
+		ble_gatts_char_handles_t notification_count_handles;
 		uint8_t uuid_type;
 		digit_ui_state_t *state;
 		ui_state_changed_callback_t ui_state_changed;

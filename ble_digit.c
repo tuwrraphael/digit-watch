@@ -24,6 +24,7 @@
 						 SECOND_LENGTH)
 
 #define LEGS_CHAR_LENGTH (CTS_CHAR_LENGTH + 2 * STOP_LENGTH + 1 + LINE_LENGTH + DIRECTION_LENGTH + 4)
+#define NOTIFICATION_COUNT_CHAR_LENGTH (1)
 
 static uint8_t min(uint8_t m1, uint8_t m2)
 {
@@ -181,6 +182,19 @@ static void on_write(ble_digit_t *p_digit, ble_evt_t const *p_ble_evt)
 			NRF_LOG_ERROR("Insufficient data length for leg: %d.", p_evt_write->len);
 		}
 	}
+	if ((p_evt_write->handle == p_digit->notification_count_handles.value_handle))
+	{
+		if (p_evt_write->len == 1)
+		{
+			p_digit->state->whatsapp_message_count = p_evt_write->data[0];
+			p_digit->ui_state_changed();
+			NRF_LOG_INFO("whatsapp message count %d", p_digit->state->whatsapp_message_count);
+		}
+		else
+		{
+			NRF_LOG_ERROR("Insufficient data length for whatsapp message count: %d.", p_evt_write->len);
+		}
+	}
 }
 
 void ble_digit_on_ble_evt(ble_evt_t const *p_ble_evt, void *p_context)
@@ -300,6 +314,31 @@ static ret_code_t directions_leg_char_add(ble_digit_t *p_digit, const ble_digit_
 	err_code = characteristic_add(p_digit->service_handle,
 								  &add_char_params,
 								  &(p_digit->directions_leg_char_handles));
+	return err_code;
+}
+
+static ret_code_t notification_count_char_add(ble_digit_t *p_digit, const ble_digit_init_t *p_digit_init)
+{
+	ret_code_t err_code;
+	ble_add_char_params_t add_char_params;
+
+	memset(&add_char_params, 0, sizeof(add_char_params));
+	add_char_params.uuid_type = p_digit->uuid_type;
+	add_char_params.uuid = DIGIT_UUID_NOTIFICATION_COUNT_CHAR;
+	add_char_params.max_len = NOTIFICATION_COUNT_CHAR_LENGTH;
+	add_char_params.init_len = 0;
+	add_char_params.p_init_value = NULL;
+	add_char_params.char_props.notify = false;
+	add_char_params.char_props.read = 0;
+	add_char_params.char_props.write = 1;
+	add_char_params.cccd_write_access = SEC_NO_ACCESS;
+	add_char_params.read_access = SEC_NO_ACCESS;
+	add_char_params.write_access = SEC_JUST_WORKS;
+	add_char_params.is_value_user = true;
+
+	err_code = characteristic_add(p_digit->service_handle,
+								  &add_char_params,
+								  &(p_digit->notification_count_handles));
 	return err_code;
 }
 
@@ -449,6 +488,8 @@ ret_code_t ble_digit_init(ble_digit_t *p_digit, const ble_digit_init_t *p_digit_
 	err_code = directions_leg_char_add(p_digit, p_digit_init);
 	VERIFY_SUCCESS(err_code);
 	err_code = button_char_add(p_digit, p_digit_init);
+	VERIFY_SUCCESS(err_code);
+	err_code = notification_count_char_add(p_digit, p_digit_init);
 	VERIFY_SUCCESS(err_code);
 
 	VERIFY_SUCCESS(nrf_mem_init());
