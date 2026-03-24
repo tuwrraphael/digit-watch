@@ -11,6 +11,7 @@ $(OUTPUT_DIRECTORY)/nrf52832_xxaa.out: \
 # Source files common to all targets
 SRC_FILES += \
 $(PROJ_DIR)/main.c \
+  $(PROJ_DIR)/button.c \
   $(PROJ_DIR)/display.c \
   $(PROJ_DIR)/display_extcomin.c \
   $(PROJ_DIR)/app_rtc.c \
