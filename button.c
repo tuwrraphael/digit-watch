@@ -25,7 +25,7 @@ void button_init(button_event_handler_t handler) {
         APP_ERROR_CHECK(err_code);
     }
 
-    nrf_drv_gpiote_in_config_t config = GPIOTE_CONFIG_IN_SENSE_TOGGLE(true);
+    nrf_drv_gpiote_in_config_t config = GPIOTE_CONFIG_IN_SENSE_TOGGLE(false);
     config.pull = NRF_GPIO_PIN_PULLUP;
 
     err_code = nrf_drv_gpiote_in_init(BUTTON_PIN, &config, button_gpiote_event_handler);
